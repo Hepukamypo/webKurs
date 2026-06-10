@@ -1,0 +1,216 @@
+{% extends 'catalog/base.html' %}
+{% block title %}{{ profile_user.username }} — Unbound{% endblock %}
+
+{% block content %}
+<div class="card-surface p-4 rounded-3 mb-4">
+  <div style="display:flex;align-items:flex-start;gap:20px;">
+    {% if profile_user.avatar %}
+      <img src="{{ profile_user.avatar.url }}" class="pav" style="object-fit:cover;" alt="{{ profile_user.username }}">
+    {% else %}
+      <div class="pav">{{ profile_user.username|first|upper }}</div>
+    {% endif %}
+    <div style="flex:1;">
+      <h2 style="font-size:20px;font-weight:600;margin-bottom:2px;">
+        {{ profile_user.get_full_name|default:profile_user.username }}
+      </h2>
+      <p style="font-size:12px;color:var(--text-light);margin-bottom:6px;">
+        На платформе с {{ profile_user.date_joined|date:"F Y" }}
+      </p>
+      {% if profile_user.bio %}
+        <p style="font-size:13px;color:#555;margin-bottom:12px;">{{ profile_user.bio }}</p>
+      {% endif %}
+      <div style="display:flex;gap:24px;margin-bottom:14px;">
+        <div style="text-align:center;">
+          <div style="font-size:18px;font-weight:600;color:var(--accent);">{{ library.count }}</div>
+          <div style="font-size:11px;color:var(--text-light);">Игр</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:18px;font-weight:600;color:var(--accent);">{{ achievements.count }}</div>
+          <div style="font-size:11px;color:var(--text-light);">Достижений</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:18px;font-weight:600;color:var(--accent);">{{ friends.count }}</div>
+          <div style="font-size:11px;color:var(--text-light);">Друзей</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:18px;font-weight:600;color:var(--accent);">{{ profile_user.reviews.count }}</div>
+          <div style="font-size:11px;color:var(--text-light);">Отзывов</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:18px;font-weight:600;color:var(--gold);">{{ total_points }}</div>
+          <div style="font-size:11px;color:var(--text-light);">Очков</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        {% if user == profile_user %}
+          <a href="{% url 'profile_edit' %}"
+             style="border:1px solid var(--border);background:var(--bg-card);color:#555;
+                    border-radius:8px;padding:6px 16px;font-size:13px;text-decoration:none;">
+            ✏ Редактировать профиль
+          </a>
+        {% elif user.is_authenticated %}
+          {% if friendship_status == 'accepted' %}
+            <span style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);
+                         border-radius:8px;padding:6px 14px;font-size:13px;">✓ Друзья</span>
+            <form method="post" action="{% url 'friend_remove' profile_user.pk %}">
+              {% csrf_token %}
+              <button style="border:1px solid #fca5a5;background:transparent;color:var(--danger);
+                             border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;">
+                Удалить из друзей
+              </button>
+            </form>
+          {% elif friendship_status == 'pending' %}
+            <span style="background:#f5f0eb;color:var(--text-muted);border:1px solid var(--border);
+                         border-radius:8px;padding:6px 14px;font-size:13px;">⏳ Заявка отправлена</span>
+          {% else %}
+            <form method="post" action="{% url 'friend_request' profile_user.pk %}">
+              {% csrf_token %}
+              <button style="background:var(--accent);color:#fff;border:none;
+                             border-radius:8px;padding:6px 16px;font-size:13px;cursor:pointer;font-weight:500;">
+                + Добавить в друзья
+              </button>
+            </form>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if pending_requests %}
+<div style="background:#fdf3dc;border:1px solid #e8d5a0;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+  <div style="font-size:13px;font-weight:500;color:var(--gold);margin-bottom:10px;">
+    Входящие заявки в друзья ({{ pending_requests.count }})
+  </div>
+  {% for fr in pending_requests %}
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+    <div class="uav" style="width:28px;height:28px;font-size:11px;">{{ fr.from_user.username|first|upper }}</div>
+    <a href="{% url 'profile' fr.from_user.pk %}"
+       style="font-size:13px;font-weight:500;color:var(--text-main);text-decoration:none;flex:1;">
+      {{ fr.from_user.username }}
+    </a>
+    <form method="post" action="{% url 'friend_respond' fr.pk 'accept' %}">
+      {% csrf_token %}
+      <button style="background:var(--accent);color:#fff;border:none;border-radius:6px;
+                     padding:4px 14px;font-size:12px;cursor:pointer;margin-right:6px;">Принять</button>
+    </form>
+    <form method="post" action="{% url 'friend_respond' fr.pk 'decline' %}">
+      {% csrf_token %}
+      <button style="background:transparent;border:1px solid #fca5a5;color:var(--danger);
+                     border-radius:6px;padding:4px 14px;font-size:12px;cursor:pointer;">Отклонить</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Вкладки — чистый JS без Bootstrap bundle -->
+<div style="display:flex;border-bottom:2px solid var(--border);margin-bottom:20px;gap:0;">
+  <button class="ptab-btn active" onclick="showTab('lib',this)"
+          style="background:none;border:none;padding:10px 20px;font-size:14px;cursor:pointer;
+                 color:var(--text-main);font-weight:500;border-bottom:2px solid var(--accent);margin-bottom:-2px;">
+    Библиотека ({{ library.count }})
+  </button>
+  <button class="ptab-btn" onclick="showTab('ach',this)"
+          style="background:none;border:none;padding:10px 20px;font-size:14px;cursor:pointer;
+                 color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;">
+    Достижения ({{ achievements.count }})
+  </button>
+  <button class="ptab-btn" onclick="showTab('fri',this)"
+          style="background:none;border:none;padding:10px 20px;font-size:14px;cursor:pointer;
+                 color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;">
+    Друзья ({{ friends.count }})
+  </button>
+</div>
+
+<div id="tab-lib">
+  <div class="games-grid">
+    {% for p in library %}
+    <a href="{% url 'game_detail' p.game.pk %}" style="text-decoration:none;">
+      <div class="game-card">
+        {% if p.game.cover %}
+          <img src="{{ p.game.cover.url }}" class="game-cover" alt="{{ p.game.title }}">
+        {% else %}
+          <div class="game-cover-placeholder">🎮</div>
+        {% endif %}
+        <div class="game-body">
+          <div class="game-name">{{ p.game.title }}</div>
+          <div style="font-size:11px;color:var(--text-light);">{{ p.purchased_at|date:"d.m.Y" }}</div>
+        </div>
+      </div>
+    </a>
+    {% empty %}
+      <p style="color:var(--text-light);font-size:13px;">Библиотека пуста.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<div id="tab-ach" style="display:none;">
+  <div class="ach-grid">
+    {% for ua in achievements %}
+    <div class="ach-card ach-unlocked">
+      <div class="ach-icon ach-gold">
+        {% if ua.achievement.icon %}<img src="{{ ua.achievement.icon.url }}" width="20">{% else %}🏆{% endif %}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div class="ach-name">{{ ua.achievement.name }}</div>
+        <div class="ach-desc">{{ ua.achievement.game.title }}</div>
+        <div style="margin-top:5px;background:#ede8e2;border-radius:4px;height:4px;">
+          <div style="height:100%;border-radius:4px;background:var(--accent);width:100%;"></div>
+        </div>
+        <div class="ach-pts">+{{ ua.achievement.points }} · {{ ua.unlocked_at|date:"d.m.Y" }}</div>
+      </div>
+    </div>
+    {% empty %}
+      <p style="color:var(--text-light);font-size:13px;">Достижений пока нет.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<div id="tab-fri" style="display:none;">
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    {% for friend in friends %}
+    <div class="card-surface p-3 rounded-3" style="display:flex;align-items:center;gap:12px;">
+      {% if friend.avatar %}
+        <img src="{{ friend.avatar.url }}" style="width:36px;height:36px;border-radius:9px;object-fit:cover;flex-shrink:0;">
+      {% else %}
+        <div class="uav" style="width:36px;height:36px;font-size:13px;flex-shrink:0;">{{ friend.username|first|upper }}</div>
+      {% endif %}
+      <div style="flex:1;min-width:0;">
+        <a href="{% url 'profile' friend.pk %}"
+           style="font-size:14px;font-weight:500;color:var(--text-main);text-decoration:none;">
+          {{ friend.username }}
+        </a>
+        <div style="font-size:11px;color:var(--text-light);margin-top:1px;">
+          {{ friend.purchases.count }} игр · {{ friend.achievements.count }} достижений
+        </div>
+      </div>
+      <a href="{% url 'profile' friend.pk %}"
+         style="font-size:12px;padding:5px 12px;border:1px solid var(--border);
+                border-radius:6px;color:var(--text-muted);text-decoration:none;">
+        Профиль
+      </a>
+    </div>
+    {% empty %}
+      <p style="color:var(--text-light);font-size:13px;">Друзей пока нет.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+function showTab(id, btn) {
+  ['lib','ach','fri'].forEach(function(t){
+    document.getElementById('tab-'+t).style.display = 'none';
+  });
+  document.querySelectorAll('.ptab-btn').forEach(function(b){
+    b.style.color = 'var(--text-muted)';
+    b.style.borderBottom = '2px solid transparent';
+    b.style.fontWeight = 'normal';
+  });
+  document.getElementById('tab-'+id).style.display = 'block';
+  btn.style.color = 'var(--text-main)';
+  btn.style.borderBottom = '2px solid var(--accent)';
+  btn.style.fontWeight = '500';
+}
+</script>
+{% endblock %}

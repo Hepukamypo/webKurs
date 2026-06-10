@@ -1,0 +1,35 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Редактировать профиль — Unbound{% endblock %}
+{% block content %}
+<div style="max-width:480px;margin:0 auto;">
+  <div class="card-surface p-4 rounded-3">
+    <h2 style="font-size:18px;font-weight:600;margin-bottom:20px;">Редактировать профиль</h2>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% for field in form %}
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:12px;color:var(--text-light);
+                       text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">
+          {{ field.label }}
+        </label>
+        {{ field }}
+        {% if field.errors %}
+          <div style="color:var(--danger);font-size:12px;margin-top:4px;">{{ field.errors.0 }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <button style="background:var(--accent);color:#fff;border:none;border-radius:8px;
+                       padding:9px 24px;font-size:14px;font-weight:500;cursor:pointer;">
+          Сохранить
+        </button>
+        <a href="{% url 'profile' user.pk %}"
+           style="background:var(--bg-surface);border:1px solid var(--border);color:#555;
+                  border-radius:8px;padding:9px 20px;font-size:14px;text-decoration:none;">
+          Отмена
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

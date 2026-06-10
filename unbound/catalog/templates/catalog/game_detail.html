@@ -1,0 +1,244 @@
+{% extends 'catalog/base.html' %}
+{% block title %}{{ game.title }} — Unbound{% endblock %}
+
+{% block content %}
+<a href="{% url 'index' %}" style="font-size:12px;color:var(--text-light);text-decoration:none;display:inline-block;margin-bottom:16px;">
+  ← Назад в каталог
+</a>
+
+<!-- Шапка игры -->
+<div class="row g-4 mb-4">
+  <div class="col-md-3">
+    {% if game.cover %}
+      <img src="{{ game.cover.url }}" class="img-fluid rounded-3 w-100"
+           style="object-fit:cover;max-height:220px;box-shadow:0 4px 20px rgba(0,0,0,.15);" alt="{{ game.title }}">
+    {% else %}
+      <div class="game-cover-placeholder rounded-3" style="height:200px;">🎮</div>
+    {% endif %}
+  </div>
+  <div class="col-md-9">
+    <h1 style="font-size:24px;font-weight:600;margin-bottom:4px;">{{ game.title }}</h1>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:10px;">
+      {% if game.developer_user %}<a href="{% url 'developer_page' game.developer_user.username %}" style="color:var(--accent);text-decoration:none;">{{ game.developer_user.username }}</a>{% else %}{{ game.developer }}{% endif %} · {{ game.get_genre_display }}
+      {% if game.release_date %} · {{ game.release_date|date:"Y" }}{% endif %}
+    </p>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <span style="color:var(--gold);font-size:16px;">
+        {% if game.avg_rating %}
+          {% for i in "12345" %}{% if forloop.counter <= game.avg_rating %}★{% else %}☆{% endif %}{% endfor %}
+        {% else %}☆☆☆☆☆{% endif %}
+      </span>
+      <span style="color:var(--text-muted);font-size:13px;">
+        {{ game.avg_rating|floatformat:1|default:"–" }} · {{ game.reviews_count }} отзывов
+      </span>
+    </div>
+    <p style="color:#555;font-size:14px;line-height:1.7;margin-bottom:16px;">{{ game.description }}</p>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      {% if game.price == 0 %}
+        <span style="font-size:22px;font-weight:600;color:var(--accent);">Бесплатно</span>
+      {% else %}
+        <span style="font-size:22px;font-weight:600;">{{ game.price|floatformat:0 }} ₽</span>
+      {% endif %}
+
+      {% if user.is_authenticated %}
+        {% if has_purchased %}
+          <span style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);
+                       border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;">
+            ✓ В библиотеке
+          </span>
+          {% if game.file %}
+            <a href="{% url 'game_download' game.pk %}"
+               style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-main);
+                      border-radius:6px;padding:6px 14px;font-size:13px;text-decoration:none;">
+              ↓ Скачать
+            </a>
+          {% endif %}
+        {% else %}
+          <form method="post" action="{% url 'buy_game' game.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button class="btn btn-success px-4">
+              {% if game.price == 0 %}Добавить бесплатно{% else %}Купить{% endif %}
+            </button>
+          </form>
+        {% endif %}
+      {% else %}
+        <a href="{% url 'login' %}" class="btn btn-success px-4">Войти для покупки</a>
+      {% endif %}
+
+      {% if user.is_authenticated and user.is_admin %}
+        <a href="{% url 'game_update' game.pk %}"
+           style="border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted);
+                  border-radius:6px;padding:6px 14px;font-size:13px;text-decoration:none;">
+          ✏ Редактировать
+        </a>
+        <a href="{% url 'game_delete' game.pk %}"
+           style="border:1px solid #fca5a5;background:var(--bg-card);color:var(--danger);
+                  border-radius:6px;padding:6px 14px;font-size:13px;text-decoration:none;">
+          🗑 Удалить
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Скриншоты -->
+{% if screenshots %}
+<div class="section-label mb-3">Скриншоты</div>
+<div class="row g-2 mb-4">
+  {% for ss in screenshots %}
+  <div class="col-6 col-md-3" style="position:relative;">
+    <img src="{{ ss.image.url }}" class="img-fluid rounded-3 w-100"
+         style="height:100px;object-fit:cover;" alt="{{ ss.caption }}">
+    {% if user.is_authenticated and user.is_admin %}
+    <form method="post" action="{% url 'screenshot_delete' ss.pk %}"
+          style="position:absolute;top:6px;right:12px;">
+      {% csrf_token %}
+      <button style="background:rgba(0,0,0,.6);color:#fff;border:none;
+                     border-radius:4px;padding:2px 8px;font-size:12px;cursor:pointer;">✕</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if user.is_authenticated and user.is_admin %}
+<div class="card-surface p-3 mb-4">
+  <div style="font-size:13px;font-weight:500;margin-bottom:10px;color:var(--text-muted);">
+    + Добавить скриншот
+  </div>
+  <form method="post" action="{% url 'screenshot_add' game.pk %}"
+        enctype="multipart/form-data" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+    {% csrf_token %}
+    <div><label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Файл</label>{{ screenshot_form.image }}</div>
+    <div><label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Подпись</label>{{ screenshot_form.caption }}</div>
+    <button class="btn btn-outline-success btn-sm">Загрузить</button>
+  </form>
+</div>
+{% endif %}
+
+<!-- Достижения -->
+<div class="section-label mb-3">Достижения ({{ achievements.count }})</div>
+{% if achievements %}
+<div class="ach-grid mb-3">
+  {% for ach in achievements %}
+  <div class="ach-card {% if ach.pk in user_ach_ids %}ach-unlocked{% endif %}"
+       style="position:relative;">
+    <div class="ach-icon {% if ach.pk in user_ach_ids %}ach-gold{% else %}ach-locked{% endif %}">
+      {% if ach.icon %}<img src="{{ ach.icon.url }}" width="20">{% else %}🏆{% endif %}
+    </div>
+    <div style="flex:1;">
+      <div class="ach-name">{{ ach.name }}</div>
+      <div class="ach-desc">{{ ach.description }}</div>
+      <div class="ach-pts">{{ ach.points }} очков
+        {% if ach.pk in user_ach_ids %}
+          <span style="color:var(--accent);margin-left:6px;">✓ Получено</span>
+        {% endif %}
+      </div>
+    </div>
+    {% if user.is_authenticated and user.is_admin %}
+    <form method="post" action="{% url 'achievement_delete' ach.pk %}"
+          style="position:absolute;top:8px;right:8px;">
+      {% csrf_token %}
+      <button style="background:transparent;border:none;color:var(--text-light);
+                     font-size:13px;cursor:pointer;" title="Удалить">✕</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p style="color:var(--text-light);font-size:13px;margin-bottom:12px;">Достижений пока нет.</p>
+{% endif %}
+
+{% if user.is_authenticated and user.is_admin %}
+<div class="card-surface p-3 mb-4">
+  <div style="font-size:13px;font-weight:500;margin-bottom:10px;color:var(--text-muted);">
+    + Добавить достижение
+  </div>
+  <form method="post" action="{% url 'achievement_create' game.pk %}"
+        enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="row g-2">
+      <div class="col-md-4">
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Название</label>
+        {{ achievement_form.name }}
+      </div>
+      <div class="col-md-4">
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Описание условия</label>
+        {{ achievement_form.description }}
+      </div>
+      <div class="col-md-2">
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Очки</label>
+        {{ achievement_form.points }}
+      </div>
+      <div class="col-md-2">
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Иконка</label>
+        {{ achievement_form.icon }}
+      </div>
+    </div>
+    <button class="btn btn-outline-success btn-sm mt-2">Создать достижение</button>
+  </form>
+</div>
+{% endif %}
+
+<!-- Отзывы -->
+<div class="section-label mb-3">Отзывы</div>
+
+{% if user.is_authenticated and has_purchased and not user_review %}
+<div class="card-surface p-3 mb-3">
+  <form method="post" action="{% url 'add_review' game.pk %}">
+    {% csrf_token %}
+    <div class="row g-2 mb-2">
+      <div class="col-md-3">
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Оценка</label>
+        {{ review_form.score }}
+      </div>
+      <div class="col-md-9">
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Отзыв</label>
+        {{ review_form.text }}
+      </div>
+    </div>
+    <button class="btn btn-success btn-sm">Опубликовать</button>
+  </form>
+</div>
+{% elif user.is_authenticated and not has_purchased and not user.is_admin %}
+<p style="color:var(--text-light);font-size:13px;margin-bottom:12px;">Купите игру, чтобы оставить отзыв.</p>
+{% elif not user.is_authenticated %}
+<p style="color:var(--text-light);font-size:13px;margin-bottom:12px;">
+  <a href="{% url 'login' %}" style="color:var(--accent);">Войдите</a>, чтобы оставить отзыв.
+</p>
+{% endif %}
+
+{% for review in reviews %}
+<div class="review-card mb-2">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+    <a href="{% url 'profile' review.user.pk %}" style="text-decoration:none;">
+      <div class="uav" style="width:30px;height:30px;font-size:12px;">
+        {{ review.user.username|first|upper }}
+      </div>
+    </a>
+    <a href="{% url 'profile' review.user.pk %}"
+       style="font-size:13px;font-weight:500;color:var(--text-main);text-decoration:none;">
+      {{ review.user.username }}
+    </a>
+    <span style="color:var(--gold);font-size:13px;">
+      {% for i in "12345" %}{% if forloop.counter <= review.score %}★{% endif %}{% endfor %}
+    </span>
+    <span style="color:var(--text-light);font-size:11px;margin-left:auto;">
+      {{ review.created_at|date:"d.m.Y" }}
+    </span>
+    {% if review.user == user or user.is_admin %}
+    <form method="post" action="{% url 'delete_review' review.pk %}" style="display:inline;">
+      {% csrf_token %}
+      <button style="background:none;border:none;color:var(--text-light);
+                     font-size:13px;cursor:pointer;" title="Удалить отзыв">✕</button>
+    </form>
+    {% endif %}
+  </div>
+  <p style="font-size:13px;color:#555;margin:0;line-height:1.6;">{{ review.text }}</p>
+</div>
+{% empty %}
+<p style="color:var(--text-light);font-size:13px;">Отзывов пока нет.</p>
+{% endfor %}
+{% endblock %}

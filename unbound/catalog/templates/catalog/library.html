@@ -1,0 +1,38 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Библиотека — Unbound{% endblock %}
+{% block content %}
+<h2 style="font-size:20px;font-weight:600;margin-bottom:20px;">Моя библиотека</h2>
+<div class="games-grid">
+  {% for p in purchases %}
+  <div class="game-card">
+    <a href="{% url 'game_detail' p.game.pk %}" style="text-decoration:none;">
+      {% if p.game.cover %}
+        <img src="{{ p.game.cover.url }}" class="game-cover" alt="{{ p.game.title }}">
+      {% else %}
+        <div class="game-cover-placeholder">🎮</div>
+      {% endif %}
+      <div class="game-body">
+        <div class="game-name">{{ p.game.title }}</div>
+        <div style="font-size:11px;color:var(--text-light);">
+          Куплено {{ p.purchased_at|date:"d.m.Y" }}
+        </div>
+      </div>
+    </a>
+    {% if p.game.file %}
+    <div style="padding:8px 10px;border-top:1px solid var(--border);">
+      <a href="{% url 'game_download' p.game.pk %}"
+         style="display:block;text-align:center;background:var(--accent-soft);
+                color:var(--accent);border:1px solid var(--accent);border-radius:6px;
+                padding:5px;font-size:12px;font-weight:500;text-decoration:none;">
+        ↓ Скачать
+      </a>
+    </div>
+    {% endif %}
+  </div>
+  {% empty %}
+  <p style="color:var(--text-light);font-size:13px;">
+    Библиотека пуста. <a href="{% url 'index' %}" style="color:var(--accent);">Перейти в магазин</a>
+  </p>
+  {% endfor %}
+</div>
+{% endblock %}

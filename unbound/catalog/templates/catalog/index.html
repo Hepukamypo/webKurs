@@ -1,0 +1,183 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Магазин — Unbound{% endblock %}
+
+{% block content %}
+
+{% if featured %}
+<div class="hero-banner mb-4">
+  <div style="display:flex;align-items:center;gap:20px;">
+    {% if featured.cover %}
+      <img src="{{ featured.cover.url }}" class="hero-cover rounded" alt="{{ featured.title }}">
+    {% endif %}
+    <div>
+      <span class="badge-gold mb-2 d-inline-block">★ Новинка</span>
+      <h2 style="color:#fff;font-size:20px;font-weight:600;margin-bottom:4px;">{{ featured.title }}</h2>
+      <p style="color:#888;font-size:13px;margin-bottom:10px;">
+        {{ featured.developer }} · {{ featured.get_genre_display }}
+      </p>
+      <div style="display:flex;align-items:center;gap:10px;">
+        {% if featured.price == 0 %}
+          <span style="font-size:20px;font-weight:600;color:var(--accent);">Бесплатно</span>
+        {% else %}
+          <span style="font-size:20px;font-weight:600;color:#fff;">{{ featured.price|floatformat:0 }} ₽</span>
+        {% endif %}
+        <a href="{% url 'game_detail' featured.pk %}"
+           style="background:var(--accent);color:#fff;border:none;border-radius:8px;
+                  padding:8px 20px;font-size:13px;font-weight:500;text-decoration:none;">
+          Подробнее
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+
+  <!-- Левая часть: каталог -->
+  <div class="col-lg-9">
+
+    <!-- Фильтры -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <a href="{% url 'index' %}" class="chip {% if not genre %}chip-on{% endif %}">Все жанры</a>
+      {% for key, label in genres %}
+        <a href="?genre={{ key }}{% if sort %}&sort={{ sort }}{% endif %}"
+           class="chip {% if genre == key %}chip-on{% endif %}">{{ label }}</a>
+      {% endfor %}
+      <div style="margin-left:auto;">
+        <select style="background:#fff;border:1px solid var(--border);color:#555;
+                       border-radius:8px;padding:5px 12px;font-size:13px;cursor:pointer;"
+                onchange="location='?{% if genre %}genre={{ genre }}&{% endif %}sort='+this.value">
+          <option value="-created_at" {% if sort == '-created_at' %}selected{% endif %}>По дате</option>
+          <option value="-avg_rating" {% if sort == '-avg_rating' %}selected{% endif %}>По рейтингу</option>
+          <option value="price"       {% if sort == 'price'       %}selected{% endif %}>Дешевле</option>
+          <option value="-price"      {% if sort == '-price'      %}selected{% endif %}>Дороже</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-label mb-3">Каталог игр</div>
+    <div class="games-grid mb-5">
+      {% for game in games %}
+      <a href="{% url 'game_detail' game.pk %}" style="text-decoration:none;">
+        <div class="game-card">
+          {% if game.cover %}
+            <img src="{{ game.cover.url }}" class="game-cover" alt="{{ game.title }}">
+          {% else %}
+            <div class="game-cover-placeholder">🎮</div>
+          {% endif %}
+          <div class="game-body">
+            <div class="game-name">{{ game.title }}</div>
+            <div style="margin-bottom:5px;">
+              <span class="genre-tag">{{ game.get_genre_display }}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:12px;color:var(--gold);">
+                {% if game.avg_rating %}
+                  ★ {{ game.avg_rating|floatformat:1 }}
+                {% else %}
+                  <span style="color:#ccc;">Нет отзывов</span>
+                {% endif %}
+              </span>
+              {% if game.price == 0 %}
+                <span class="price-free">Бесплатно</span>
+              {% else %}
+                <span class="price-tag">{{ game.price|floatformat:0 }} ₽</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </a>
+      {% empty %}
+        <p style="color:var(--text-light);">Игры не найдены.</p>
+      {% endfor %}
+    </div>
+
+    <!-- Достижения с прогресс-барами -->
+    {% if user.is_authenticated and recent_achievements %}
+    <div class="section-label mb-3">Ваши достижения</div>
+    <div class="ach-grid mb-4">
+      {% for ua in recent_achievements %}
+      <div class="ach-card ach-unlocked">
+        <div class="ach-icon ach-gold">
+          {% if ua.achievement.icon %}
+            <img src="{{ ua.achievement.icon.url }}" width="20">
+          {% else %}🏆{% endif %}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div class="ach-name">{{ ua.achievement.name }}</div>
+          <div class="ach-desc">{{ ua.achievement.game.title }}</div>
+          <!-- Прогресс-бар -->
+          <div style="margin-top:6px;background:#e8e3dc;border-radius:4px;height:4px;">
+            <div style="height:100%;border-radius:4px;background:var(--accent);width:100%;
+                        transition:width .4s ease;"></div>
+          </div>
+          <div class="ach-pts" style="margin-top:3px;">+{{ ua.achievement.points }} очков</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Правая часть: лидерборд -->
+  <div class="col-lg-3">
+    <div class="leaderboard-card">
+      <div class="section-label mb-3">Лидерборд</div>
+      {% if top_users %}
+        {% for u in top_users %}
+        <a href="{% url 'profile' u.pk %}" style="text-decoration:none;
+           display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <!-- Место -->
+          <div style="width:20px;font-size:12px;color:var(--text-light);
+                      text-align:right;flex-shrink:0;">
+            {% if forloop.counter == 1 %}🥇
+            {% elif forloop.counter == 2 %}🥈
+            {% elif forloop.counter == 3 %}🥉
+            {% else %}{{ forloop.counter }}.{% endif %}
+          </div>
+          <!-- Аватар -->
+          {% if u.avatar %}
+            <img src="{{ u.avatar.url }}"
+                 style="width:30px;height:30px;border-radius:7px;object-fit:cover;flex-shrink:0;">
+          {% else %}
+            <div class="uav" style="width:30px;height:30px;font-size:12px;flex-shrink:0;">
+              {{ u.username|first|upper }}
+            </div>
+          {% endif %}
+          <!-- Имя -->
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:var(--text-main);
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {{ u.username }}
+            </div>
+            <!-- Мини прогресс-бар лидерборда -->
+            <div style="background:#ede8e2;border-radius:3px;height:3px;margin-top:3px;">
+              <div style="height:100%;border-radius:3px;background:var(--gold);
+                          width:{% widthratio u.total_points top_users.0.total_points 100 %}%;"></div>
+            </div>
+          </div>
+          <!-- Очки -->
+          <div style="font-size:12px;font-weight:500;color:var(--gold);flex-shrink:0;">
+            {{ u.total_points }} ★
+          </div>
+        </a>
+        {% endfor %}
+      {% else %}
+        <p style="font-size:13px;color:var(--text-light);text-align:center;padding:20px 0;">
+          Пока никто не получил достижений.
+        </p>
+      {% endif %}
+
+      <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:10px;">
+        <a href="{% url 'index' %}"
+           style="font-size:12px;color:var(--text-light);text-decoration:none;">
+          Все игроки →
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

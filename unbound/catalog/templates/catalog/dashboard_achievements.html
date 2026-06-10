@@ -1,0 +1,107 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Достижения — Unbound{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:200px 1fr;gap:0;margin:-24px;min-height:calc(100vh - 52px);">
+  {% include "catalog/dashboard_sidebar.html" %}
+  <div style="padding:24px;background:var(--bg-page);">
+    <h1 style="font-size:18px;font-weight:600;margin-bottom:20px;">Достижения</h1>
+
+    <!-- Форма создания достижения -->
+    <div class="card-surface p-4 rounded-3 mb-4">
+      <div style="font-size:14px;font-weight:500;margin-bottom:14px;">+ Создать достижение</div>
+      <form method="post" action="" enctype="multipart/form-data" id="ach-form">
+        {% csrf_token %}
+        <input type="hidden" name="create_achievement" value="1">
+        <div style="display:grid;grid-template-columns:1fr 1fr 120px 120px 160px;gap:12px;align-items:end;">
+          <div>
+            <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Игра</label>
+            <select name="game_pk" class="form-control" style="width:100%;">
+              {% for game in games %}
+              <option value="{{ game.pk }}">{{ game.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Название</label>
+            {{ achievement_form.name }}
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Очки</label>
+            {{ achievement_form.points }}
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Иконка</label>
+            {{ achievement_form.icon }}
+          </div>
+          <div>
+            <button style="background:var(--accent);color:#fff;border:none;border-radius:8px;
+                           padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;width:100%;">
+              Создать
+            </button>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Описание условия</label>
+          {{ achievement_form.description }}
+        </div>
+      </form>
+    </div>
+
+    <!-- Таблица достижений -->
+    <div class="card-surface rounded-3" style="overflow:hidden;">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;">
+        Все достижения ({{ achievements.count }})
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#faf8f5;">
+          <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Достижение</th>
+          <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Игра</th>
+          <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Очки</th>
+          <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Получили</th>
+          <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Действия</th>
+        </tr></thead>
+        <tbody>
+          {% for ach in achievements %}
+          <tr style="border-bottom:0.5px solid var(--border);">
+            <td style="padding:12px 18px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:32px;height:32px;background:var(--gold-soft);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;">
+                  {% if ach.icon %}<img src="{{ ach.icon.url }}" width="20">{% else %}🏆{% endif %}
+                </div>
+                <div>
+                  <div style="font-weight:500;">{{ ach.name }}</div>
+                  <div style="font-size:11px;color:var(--text-light);">{{ ach.description }}</div>
+                </div>
+              </div>
+            </td>
+            <td style="padding:12px 18px;"><a href="{% url 'game_detail' ach.game.pk %}" style="color:var(--accent);text-decoration:none;">{{ ach.game.title }}</a></td>
+            <td style="padding:12px 18px;font-weight:500;color:var(--gold);">{{ ach.points }} ★</td>
+            <td style="padding:12px 18px;color:var(--text-muted);">{{ ach.unlocked_count }} чел.</td>
+            <td style="padding:12px 18px;">
+              <form method="post" action="{% url 'achievement_delete' ach.pk %}">
+                {% csrf_token %}
+                <button style="background:transparent;border:1px solid #fca5a5;color:var(--danger);border-radius:5px;padding:4px 12px;font-size:12px;cursor:pointer;">Удалить</button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-light);">Достижений пока нет. Создайте первое выше.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// Форма создания — редиректим на страницу игры через achievement_create URL
+document.getElementById('ach-form').addEventListener('submit', function(e){
+  e.preventDefault();
+  var gamePk = this.querySelector('[name="game_pk"]').value;
+  var form = this;
+  var action = '/game/' + gamePk + '/achievement/create/';
+  form.action = action;
+  form.submit();
+});
+</script>
+{% endblock %}

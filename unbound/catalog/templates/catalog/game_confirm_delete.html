@@ -1,0 +1,22 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Удалить {{ game.title }} — Unbound{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card-surface p-4 rounded-3 text-center">
+      <div class="fs-1 mb-3">🗑️</div>
+      <h2 class="fs-4 fw-semibold mb-2">Удалить игру?</h2>
+      <p class="text-muted mb-4">
+        Игра <strong>{{ game.title }}</strong> будет удалена безвозвратно
+        вместе с файлами, скриншотами и достижениями.
+      </p>
+      <form method="post">
+        {% csrf_token %}
+        <button class="btn btn-danger me-2">Да, удалить</button>
+        <a href="{% url 'game_detail' game.pk %}" class="btn btn-outline-secondary">Отмена</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

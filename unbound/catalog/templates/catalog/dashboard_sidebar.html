@@ -1,0 +1,53 @@
+<div style="background:#1c1c1c;padding:20px 12px;min-height:calc(100vh - 52px);">
+  <div style="font-size:10px;font-weight:600;color:#555;text-transform:uppercase;
+              letter-spacing:1px;margin-bottom:16px;padding:0 8px;">Unbound</div>
+  {% with url_name=request.resolver_match.url_name %}
+  <a href="{% url 'dashboard' %}"
+     style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+            font-size:13px;text-decoration:none;margin-bottom:3px;
+            {% if url_name == 'dashboard' %}background:rgba(16,124,16,.15);color:#4ade4a;font-weight:500;{% else %}color:#999;{% endif %}">
+    📊 Обзор
+  </a>
+  <a href="{% url 'game_create' %}"
+     style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+            font-size:13px;text-decoration:none;margin-bottom:3px;color:#999;">
+    🎮 Добавить игру
+  </a>
+  <a href="{% url 'game_moderation' %}"
+     style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+            font-size:13px;text-decoration:none;margin-bottom:3px;
+            {% if url_name == 'game_moderation' %}background:rgba(16,124,16,.15);color:#4ade4a;font-weight:500;{% else %}color:#999;{% endif %}">
+    🕹 Модерация игр
+  </a>
+  <a href="{% url 'moderation' %}" 
+     style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+            font-size:13px;text-decoration:none;margin-bottom:3px;
+            {% if url_name == 'moderation' %}background:rgba(16,124,16,.15);color:#4ade4a;font-weight:500;{% else %}color:#999;{% endif %}">
+    💬 Модерация отзывов
+  </a>
+  <a href="{% url 'dashboard_users' %}"
+     style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+            font-size:13px;text-decoration:none;margin-bottom:3px;
+            {% if url_name == 'dashboard_users' %}background:rgba(16,124,16,.15);color:#4ade4a;font-weight:500;{% else %}color:#999;{% endif %}">
+    👥 Пользователи
+  </a>
+  <a href="{% url 'dashboard_achievements' %}"
+     style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+            font-size:13px;text-decoration:none;margin-bottom:3px;
+            {% if url_name == 'dashboard_achievements' %}background:rgba(16,124,16,.15);color:#4ade4a;font-weight:500;{% else %}color:#999;{% endif %}">
+    🏆 Достижения
+  </a>
+  <a href="{% url 'dashboard_purchases' %}"
+     style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+            font-size:13px;text-decoration:none;
+            {% if url_name == 'dashboard_purchases' %}background:rgba(16,124,16,.15);color:#4ade4a;font-weight:500;{% else %}color:#999;{% endif %}">
+    🛒 Покупки
+  </a>
+  {% endwith %}
+  <div style="border-top:1px solid #2a2a2a;margin:16px 0 12px;"></div>
+  <a href="{% url 'index' %}"
+     style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+            font-size:13px;text-decoration:none;color:#666;">
+    ← На сайт
+  </a>
+</div>

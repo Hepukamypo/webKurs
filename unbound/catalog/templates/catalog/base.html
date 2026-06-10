@@ -1,0 +1,131 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Unbound{% endblock %}</title>
+  <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <script src="{% static 'js/htmx.min.js' %}"></script>
+</head>
+<body>
+
+<nav style="display:flex;align-items:center;background:#1c1c1c;border-bottom:2px solid #107c10;
+             height:52px;padding:0 20px;gap:10px;position:sticky;top:0;z-index:100;">
+
+  <a href="{% url 'index' %}"
+     style="font-size:17px;font-weight:600;color:#fff;text-decoration:none;
+            letter-spacing:.3px;flex-shrink:0;margin-right:6px;">
+    <span style="color:#fff;">UN</span><span style="color:#107c10;">BOUND</span>
+  </a>
+
+  <div style="display:flex;gap:12px;flex:1;min-width:0;">
+    <a style="font-size:13px;color:{% if request.resolver_match.url_name == 'index' %}#fff{% else %}#999{% endif %};text-decoration:none;white-space:nowrap;"
+       href="{% url 'index' %}">Магазин</a>
+    {% if user.is_authenticated %}
+    <a style="font-size:13px;color:{% if request.resolver_match.url_name == 'library' %}#fff{% else %}#999{% endif %};text-decoration:none;white-space:nowrap;"
+       href="{% url 'library' %}">Библиотека</a>
+    <a style="font-size:13px;color:{% if request.resolver_match.url_name == 'community' %}#fff{% else %}#999{% endif %};text-decoration:none;white-space:nowrap;"
+       href="{% url 'community' %}">Сообщество</a>
+    {% if user.is_developer %}
+    <a style="font-size:13px;color:{% if request.resolver_match.url_name == 'studio' or request.resolver_match.url_name|slice:':6' == 'studio' %}#4ade4a{% else %}#a78bfa{% endif %};text-decoration:none;white-space:nowrap;font-weight:500;"
+       href="{% url 'studio' %}">🛠 Студия</a>
+    {% endif %}
+    {% if user.is_admin %}
+    <a style="font-size:13px;color:{% if request.resolver_match.url_name == 'dashboard' %}#4ade4a{% else %}#f59e0b{% endif %};text-decoration:none;white-space:nowrap;"
+       href="{% url 'dashboard' %}">Панель</a>
+    <a style="font-size:13px;color:{% if request.resolver_match.url_name == 'moderation' %}#4ade4a{% else %}#f59e0b{% endif %};text-decoration:none;white-space:nowrap;"
+       href="{% url 'moderation' %}">Модерация</a>
+    {% endif %}
+    {% endif %}
+  </div>
+
+  <div style="position:relative;width:200px;flex-shrink:0;">
+    <input type="search" id="search-input"
+           style="width:100%;background:#2a2a2a;border:1px solid #3a3a3a;color:#ccc;
+                  border-radius:8px;padding:6px 14px;font-size:13px;outline:none;"
+           placeholder="🔍 Поиск игр..."
+           hx-get="{% url 'search' %}"
+           hx-trigger="keyup changed delay:300ms"
+           hx-target="#search-results"
+           autocomplete="off">
+    <div id="search-results"
+         style="position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:999;
+                background:#fff;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.15);
+                display:none;overflow:hidden;max-height:400px;overflow-y:auto;">
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+    {% if user.is_authenticated %}
+      {% if user.is_admin %}
+      <a href="{% url 'game_create' %}"
+         style="border:1px solid #107c10;color:#107c10;border-radius:8px;
+                padding:5px 12px;font-size:13px;text-decoration:none;white-space:nowrap;">
+        + Игру
+      </a>
+      {% endif %}
+      <a href="{% url 'profile' user.pk %}"
+         style="display:flex;align-items:center;gap:6px;text-decoration:none;">
+        {% if user.avatar %}
+          <img src="{{ user.avatar.url }}"
+               style="width:26px;height:26px;border-radius:6px;object-fit:cover;">
+        {% else %}
+          <div style="width:26px;height:26px;border-radius:6px;background:#107c10;
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:11px;font-weight:600;color:#fff;">
+            {{ user.username|first|upper }}
+          </div>
+        {% endif %}
+        <span style="color:#ccc;font-size:13px;">{{ user.username }}</span>
+      </a>
+      <form method="post" action="{% url 'logout' %}" style="display:inline;">
+        {% csrf_token %}
+        <button style="background:none;border:none;color:#666;font-size:13px;
+                       cursor:pointer;padding:0;">Выйти</button>
+      </form>
+    {% else %}
+      <a href="{% url 'login' %}"
+         style="border:1px solid #444;color:#ccc;border-radius:8px;
+                padding:5px 12px;font-size:13px;text-decoration:none;">Войти</a>
+      <a href="{% url 'register' %}"
+         style="background:#107c10;color:#fff;border-radius:8px;
+                padding:6px 14px;font-size:13px;text-decoration:none;">Регистрация</a>
+    {% endif %}
+  </div>
+</nav>
+
+<main style="min-height:calc(100vh - 52px);padding:24px 0;background:var(--bg-page);">
+  <div class="container-xl">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-3">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var input   = document.getElementById('search-input');
+  var results = document.getElementById('search-results');
+  if(!input) return;
+  input.addEventListener('keyup', function(){
+    results.style.display = this.value.length > 0 ? 'block' : 'none';
+  });
+  document.addEventListener('click', function(e){
+    if(!input.contains(e.target) && !results.contains(e.target)){
+      results.style.display = 'none';
+      input.value = '';
+    }
+  });
+});
+</script>
+</body>
+</html>

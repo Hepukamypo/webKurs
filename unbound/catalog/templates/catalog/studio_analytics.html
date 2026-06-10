@@ -1,0 +1,181 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Аналитика — {{ game.title }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'studio' %}" style="font-size:12px;color:var(--text-light);text-decoration:none;display:inline-block;margin-bottom:16px;">
+  ← Моя студия
+</a>
+
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
+  {% if game.cover %}
+    <img src="{{ game.cover.url }}" style="width:56px;height:56px;border-radius:10px;object-fit:cover;">
+  {% endif %}
+  <div>
+    <h1 style="font-size:20px;font-weight:600;margin-bottom:2px;">{{ game.title }}</h1>
+    <p style="font-size:13px;color:var(--text-muted);">Аналитика за последние 30 дней</p>
+  </div>
+  <a href="{% url 'game_detail' game.pk %}" target="_blank"
+     style="margin-left:auto;border:1px solid var(--border);border-radius:8px;padding:7px 16px;
+            font-size:13px;color:var(--text-muted);text-decoration:none;">
+    Страница игры →
+  </a>
+</div>
+
+<!-- Метрики -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;">
+  <div class="card-surface p-3 rounded-3" style="text-align:center;">
+    <div style="font-size:28px;font-weight:600;color:var(--accent);">{{ total_purchases }}</div>
+    <div style="font-size:12px;color:var(--text-light);margin-top:3px;">Всего покупок</div>
+  </div>
+  <div class="card-surface p-3 rounded-3" style="text-align:center;">
+    <div style="font-size:28px;font-weight:600;color:var(--gold);">{{ total_revenue|floatformat:0 }} ₽</div>
+    <div style="font-size:12px;color:var(--text-light);margin-top:3px;">Общий доход</div>
+  </div>
+  <div class="card-surface p-3 rounded-3" style="text-align:center;">
+    <div style="font-size:28px;font-weight:600;">{{ reviews.count }}</div>
+    <div style="font-size:12px;color:var(--text-light);margin-top:3px;">Отзывов</div>
+  </div>
+  <div class="card-surface p-3 rounded-3" style="text-align:center;">
+    <div style="font-size:28px;font-weight:600;color:var(--gold);">
+      {% if game.avg_rating %}★ {{ game.avg_rating|floatformat:1 }}{% else %}—{% endif %}
+    </div>
+    <div style="font-size:12px;color:var(--text-light);margin-top:3px;">Средний рейтинг</div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- График продаж -->
+  <div class="col-md-6">
+    <div class="card-surface p-3 rounded-3">
+      <div style="font-size:14px;font-weight:500;margin-bottom:14px;">Продажи по дням</div>
+      {% if purchases_by_day %}
+      <div style="display:flex;align-items:flex-end;gap:4px;height:120px;">
+        {% with max_count=purchases_by_day|dictsort:"count"|last %}
+        {% for day in purchases_by_day %}
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <div style="font-size:10px;color:var(--text-light);">{{ day.count }}</div>
+          <div style="width:100%;background:var(--accent);border-radius:3px 3px 0 0;
+                      min-height:4px;height:{% widthratio day.count max_count.count 100 %}px;"></div>
+          <div style="font-size:9px;color:var(--text-light);transform:rotate(-45deg);
+                      white-space:nowrap;margin-top:2px;">{{ day.day|date:"d.m" }}</div>
+        </div>
+        {% endfor %}
+        {% endwith %}
+      </div>
+      {% else %}
+      <div style="text-align:center;padding:30px;color:var(--text-light);font-size:13px;">
+        Продаж за последние 30 дней нет
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Последние отзывы -->
+  <div class="col-md-6">
+    <div class="card-surface p-3 rounded-3">
+      <div style="font-size:14px;font-weight:500;margin-bottom:14px;">Последние отзывы</div>
+      {% for review in reviews|slice:":5" %}
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:0.5px solid var(--border);">
+        <div class="uav" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">{{ review.user.username|first|upper }}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+            <span style="font-size:13px;font-weight:500;">{{ review.user.username }}</span>
+            <span style="color:var(--gold);font-size:12px;">{% for i in "12345" %}{% if forloop.counter <= review.score %}★{% endif %}{% endfor %}</span>
+            <span style="font-size:11px;color:var(--text-light);margin-left:auto;">{{ review.created_at|date:"d.m.Y" }}</span>
+          </div>
+          <p style="font-size:12px;color:#555;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ review.text }}</p>
+        </div>
+      </div>
+      {% empty %}
+      <div style="text-align:center;padding:20px;color:var(--text-light);font-size:13px;">Отзывов пока нет</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Скриншоты -->
+<div class="card-surface p-3 rounded-3 mb-4">
+  <div style="font-size:14px;font-weight:500;margin-bottom:14px;">Скриншоты</div>
+  {% if screenshots %}
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
+    {% for ss in screenshots %}
+    <div style="position:relative;">
+      <img src="{{ ss.image.url }}" style="width:100%;height:80px;object-fit:cover;border-radius:6px;">
+      <form method="post" action="{% url 'screenshot_delete' ss.pk %}" style="position:absolute;top:4px;right:4px;">
+        {% csrf_token %}
+        <button style="background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;">✕</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <form method="post" action="{% url 'screenshot_add' game.pk %}" enctype="multipart/form-data"
+        style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+    {% csrf_token %}
+    <div>
+      <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Добавить скриншот</label>
+      {{ screenshot_form.image }}
+    </div>
+    <div>
+      <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Подпись</label>
+      {{ screenshot_form.caption }}
+    </div>
+    <button style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);border-radius:7px;padding:8px 16px;font-size:13px;cursor:pointer;">Загрузить</button>
+  </form>
+</div>
+
+<!-- Достижения -->
+<div class="card-surface p-3 rounded-3">
+  <div style="font-size:14px;font-weight:500;margin-bottom:14px;">Достижения игры</div>
+  {% if achievements %}
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+    {% for ach in achievements %}
+    <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--bg-surface);border-radius:8px;">
+      <div style="width:32px;height:32px;background:var(--gold-soft);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+        {% if ach.icon %}<img src="{{ ach.icon.url }}" width="18">{% else %}🏆{% endif %}
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;">{{ ach.name }}</div>
+        <div style="font-size:11px;color:var(--text-muted);">
+          {{ ach.description }} · {{ ach.points }} очков ·
+          <span style="color:var(--accent);">{{ ach.get_trigger_display }}</span>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-light);">Получили: <strong style="color:var(--accent);">{{ ach.unlocked_count }}</strong></div>
+      <form method="post" action="{% url 'achievement_delete' ach.pk %}">
+        {% csrf_token %}
+        <button style="background:transparent;border:none;color:var(--text-light);font-size:13px;cursor:pointer;">✕</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'achievement_create' game.pk %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div>
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Название</label>
+        {{ achievement_form.name }}
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Условие выдачи</label>
+        {{ achievement_form.trigger }}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 120px;gap:10px;">
+      <div>
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Описание для игрока</label>
+        {{ achievement_form.description }}
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Очки</label>
+        {{ achievement_form.points }}
+      </div>
+    </div>
+    <button style="margin-top:10px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);border-radius:7px;padding:7px 16px;font-size:13px;cursor:pointer;">
+      + Добавить достижение
+    </button>
+  </form>
+</div>
+{% endblock %}

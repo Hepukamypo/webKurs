@@ -1,0 +1,25 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Вход — Unbound{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-4">
+    <div class="card-surface p-4 rounded-3">
+      <h2 class="fs-4 fw-semibold text-center mb-4">UN<span class="text-success">BOUND</span></h2>
+      <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="mb-3">
+          <label class="form-label text-muted small">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="text-danger small">{{ field.errors.0 }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        <button class="btn btn-success w-100 mt-2">Войти</button>
+      </form>
+      <p class="text-center text-muted small mt-3">
+        Нет аккаунта? <a href="{% url 'register' %}" class="text-success">Зарегистрироваться</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

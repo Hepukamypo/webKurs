@@ -1,0 +1,44 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Покупки — Unbound{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:200px 1fr;gap:0;margin:-24px;min-height:calc(100vh - 52px);">
+  {% include "catalog/dashboard_sidebar.html" %}
+  <div style="padding:24px;background:var(--bg-page);">
+    <h1 style="font-size:18px;font-weight:600;margin-bottom:20px;">Покупки ({{ purchases.count }})</h1>
+    <div class="card-surface rounded-3" style="overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#faf8f5;">
+          <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Пользователь</th>
+          <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Игра</th>
+          <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Сумма</th>
+          <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Дата</th>
+        </tr></thead>
+        <tbody>
+          {% for p in purchases %}
+          <tr style="border-bottom:0.5px solid var(--border);">
+            <td style="padding:12px 18px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="uav" style="font-size:11px;flex-shrink:0;">{{ p.user.username|first|upper }}</div>
+                <a href="{% url 'profile' p.user.pk %}" style="color:var(--text-main);text-decoration:none;font-weight:500;">{{ p.user.username }}</a>
+              </div>
+            </td>
+            <td style="padding:12px 18px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                {% if p.game.cover %}<img src="{{ p.game.cover.url }}" style="width:28px;height:28px;border-radius:4px;object-fit:cover;">{% endif %}
+                <a href="{% url 'game_detail' p.game.pk %}" style="color:var(--accent);text-decoration:none;">{{ p.game.title }}</a>
+              </div>
+            </td>
+            <td style="padding:12px 18px;font-weight:500;">
+              {% if p.price_paid == 0 %}<span style="color:var(--accent);">Бесплатно</span>{% else %}{{ p.price_paid|floatformat:0 }} ₽{% endif %}
+            </td>
+            <td style="padding:12px 18px;color:var(--text-muted);">{{ p.purchased_at|date:"d.m.Y H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-light);">Покупок пока нет</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

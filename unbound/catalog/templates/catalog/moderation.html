@@ -1,0 +1,51 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Модерация отзывов — Unbound{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+  <h1 style="font-size:20px;font-weight:600;">Модерация отзывов</h1>
+  <span style="font-size:13px;color:var(--text-muted);">Всего: {{ reviews.count }}</span>
+</div>
+
+{% if reviews %}
+<div style="display:flex;flex-direction:column;gap:10px;">
+  {% for review in reviews %}
+  <div class="card-surface p-3" style="display:flex;align-items:flex-start;gap:14px;">
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+        <a href="{% url 'profile' review.user.pk %}"
+           style="font-size:13px;font-weight:500;color:var(--text-main);text-decoration:none;">
+          {{ review.user.username }}
+        </a>
+        <span style="color:var(--gold);font-size:13px;">
+          {% for i in "12345" %}{% if forloop.counter <= review.score %}★{% endif %}{% endfor %}
+        </span>
+        <span style="font-size:12px;color:var(--accent);">→</span>
+        <a href="{% url 'game_detail' review.game.pk %}"
+           style="font-size:13px;color:var(--accent);text-decoration:none;">
+          {{ review.game.title }}
+        </a>
+        <span style="font-size:11px;color:var(--text-light);margin-left:auto;">
+          {{ review.created_at|date:"d.m.Y H:i" }}
+        </span>
+      </div>
+      <p style="font-size:13px;color:#555;margin:0;line-height:1.6;">{{ review.text }}</p>
+    </div>
+    <form method="post" action="{% url 'delete_review' review.pk %}?next=moderation"
+          style="flex-shrink:0;">
+      {% csrf_token %}
+      <button style="background:transparent;border:1px solid #fca5a5;color:var(--danger);
+                     border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">
+        Удалить
+      </button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+  <div style="font-size:40px;margin-bottom:10px;">✓</div>
+  <p>Отзывов нет — всё чисто.</p>
+</div>
+{% endif %}
+{% endblock %}
