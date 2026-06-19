@@ -1,0 +1,72 @@
+{% extends 'catalog/base.html' %}
+{% block title %}{{ category.name }} — Форум — Unbound{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <a href="{% url 'forum_index' %}" style="font-size:12px;color:var(--text-light);text-decoration:none;">← Форум</a>
+    <h1 style="font-size:20px;font-weight:600;margin-top:4px;">{{ category.icon }} {{ category.name }}</h1>
+    {% if category.description %}<p style="font-size:13px;color:var(--text-muted);">{{ category.description }}</p>{% endif %}
+  </div>
+  {% if user.is_authenticated %}
+  <a href="{% url 'forum_thread_create' category.slug %}"
+     style="background:var(--accent);color:#fff;border-radius:8px;padding:9px 18px;font-size:14px;font-weight:500;text-decoration:none;white-space:nowrap;">
+    + Создать тему
+  </a>
+  {% endif %}
+</div>
+
+{% if threads %}
+<div class="card-surface rounded-3" style="overflow:hidden;">
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="background:#faf8f5;">
+        <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Тема</th>
+        <th style="text-align:center;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Ответов</th>
+        <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Последний пост</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for thread in threads %}
+      <tr style="border-bottom:0.5px solid var(--border);">
+        <td style="padding:12px 18px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            {% if thread.is_pinned %}<span style="font-size:12px;" title="Закреплено">📌</span>{% endif %}
+            {% if thread.is_closed %}<span style="font-size:12px;" title="Закрыто">🔒</span>{% endif %}
+            <div>
+              <a href="{% url 'forum_thread' thread.pk %}"
+                 style="font-size:14px;font-weight:500;color:var(--text-main);text-decoration:none;">
+                {{ thread.title }}
+              </a>
+              <div style="font-size:11px;color:var(--text-light);margin-top:2px;">
+                <a href="{% url 'profile' thread.author.pk %}" style="color:var(--accent);text-decoration:none;">{{ thread.author.username }}</a>
+                · {{ thread.created_at|date:"d.m.Y" }}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td style="padding:12px 18px;text-align:center;font-weight:500;color:var(--text-main);">{{ thread.post_count }}</td>
+        <td style="padding:12px 18px;">
+          {% with last=thread.posts.last %}
+          {% if last %}
+          <div style="font-size:12px;color:var(--text-muted);">
+            <a href="{% url 'profile' last.author.pk %}" style="color:var(--accent);text-decoration:none;">{{ last.author.username }}</a>
+            <div style="color:var(--text-light);font-size:11px;">{{ last.created_at|date:"d.m H:i" }}</div>
+          </div>
+          {% endif %}
+          {% endwith %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div style="text-align:center;padding:60px;color:var(--text-light);">
+  <div style="font-size:40px;margin-bottom:10px;">💬</div>
+  <p style="font-size:14px;">Тем пока нет. Будьте первым!</p>
+  {% if user.is_authenticated %}
+  <a href="{% url 'forum_thread_create' category.slug %}" style="color:var(--accent);font-size:14px;">Создать тему →</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

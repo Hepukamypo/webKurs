@@ -209,3 +209,144 @@ class Friendship(models.Model):
         received = Friendship.objects.filter(to_user=user, status='accepted')\
                                      .values_list('from_user', flat=True)
         return User.objects.filter(pk__in=list(sent) + list(received))
+
+
+# ── Личные сообщения ──────────────────────────────────────────────────────────
+
+class Conversation(models.Model):
+    """Диалог между двумя пользователями."""
+    participants = models.ManyToManyField(
+                       User, related_name='conversations')
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def get_other(self, user):
+        return self.participants.exclude(pk=user.pk).first()
+
+    def unread_count(self, user):
+        return self.messages.filter(
+            is_read=False).exclude(sender=user).count()
+
+
+class Message(models.Model):
+    """Сообщение в диалоге."""
+    conversation = models.ForeignKey(
+                       Conversation, on_delete=models.CASCADE,
+                       related_name='messages')
+    sender       = models.ForeignKey(
+                       User, on_delete=models.CASCADE,
+                       related_name='sent_messages')
+    text         = models.TextField()
+    is_read      = models.BooleanField(default=False)
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.sender.username}: {self.text[:50]}'
+
+
+# ── Форум ─────────────────────────────────────────────────────────────────────
+
+class ForumCategory(models.Model):
+    """Раздел форума."""
+    name        = models.CharField(max_length=100)
+    slug        = models.SlugField(unique=True)
+    description = models.TextField(blank=True)
+    icon        = models.CharField(max_length=10, default='💬')
+    order       = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+        verbose_name        = 'Раздел форума'
+        verbose_name_plural = 'Разделы форума'
+
+    def __str__(self):
+        return self.name
+
+
+class ForumThread(models.Model):
+    """Тема на форуме."""
+    category   = models.ForeignKey(
+                     ForumCategory, on_delete=models.CASCADE,
+                     related_name='threads')
+    author     = models.ForeignKey(
+                     User, on_delete=models.CASCADE,
+                     related_name='threads')
+    title      = models.CharField(max_length=300)
+    is_pinned  = models.BooleanField(default=False)
+    is_closed  = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_pinned', '-updated_at']
+        verbose_name        = 'Тема форума'
+        verbose_name_plural = 'Темы форума'
+
+    def __str__(self):
+        return self.title
+
+    def post_count(self):
+        return self.posts.count()
+
+    def last_post(self):
+        return self.posts.order_by('-created_at').first()
+
+
+class ForumPost(models.Model):
+    """Пост в теме форума."""
+    thread     = models.ForeignKey(
+                     ForumThread, on_delete=models.CASCADE,
+                     related_name='posts')
+    author     = models.ForeignKey(
+                     User, on_delete=models.CASCADE,
+                     related_name='forum_posts')
+    text       = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    likes      = models.ManyToManyField(
+                     User, related_name='liked_posts', blank=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.author.username} в {self.thread.title}'
+
+
+# ── Уведомления ───────────────────────────────────────────────────────────────
+
+class Notification(models.Model):
+    """Уведомление пользователя."""
+    TYPE_CHOICES = [
+        ('message',       'Новое сообщение'),
+        ('forum_reply',   'Ответ в теме'),
+        ('friend_req',    'Заявка в друзья'),
+        ('friend_accept', 'Заявка принята'),
+        ('achievement',   'Новое достижение'),
+        ('game_approved', 'Игра одобрена'),
+        ('game_rejected', 'Игра отклонена'),
+    ]
+    recipient  = models.ForeignKey(
+                     User, on_delete=models.CASCADE,
+                     related_name='notifications')
+    type       = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    text       = models.CharField(max_length=300)
+    link       = models.CharField(max_length=200, blank=True)
+    is_read    = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    @staticmethod
+    def create(recipient, ntype, text, link=''):
+        if recipient:
+            Notification.objects.create(
+                recipient=recipient,
+                type=ntype, text=text, link=link)

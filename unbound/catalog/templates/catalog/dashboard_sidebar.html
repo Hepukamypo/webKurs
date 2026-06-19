@@ -19,6 +19,12 @@
             {% if url_name == 'game_moderation' %}background:rgba(16,124,16,.15);color:#4ade4a;font-weight:500;{% else %}color:#999;{% endif %}">
     🕹 Модерация игр
   </a>
+  <a href="{% url 'dashboard_forum' %}"
+     style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+            font-size:13px;text-decoration:none;margin-bottom:3px;
+            {% if url_name == 'dashboard_forum' %}background:rgba(16,124,16,.15);color:#4ade4a;font-weight:500;{% else %}color:#999;{% endif %}">
+    💬 Форум
+  </a>
   <a href="{% url 'moderation' %}" 
      style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
             font-size:13px;text-decoration:none;margin-bottom:3px;

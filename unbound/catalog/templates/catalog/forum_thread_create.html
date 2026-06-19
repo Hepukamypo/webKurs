@@ -1,0 +1,40 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Новая тема — {{ category.name }}{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+  <a href="{% url 'forum_category' category.slug %}"
+     style="font-size:12px;color:var(--text-light);text-decoration:none;display:inline-block;margin-bottom:16px;">
+    ← {{ category.name }}
+  </a>
+  <div class="card-surface p-4 rounded-3">
+    <h1 style="font-size:18px;font-weight:600;margin-bottom:20px;">Новая тема в «{{ category.name }}»</h1>
+    <form method="post">
+      {% csrf_token %}
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;color:var(--text-light);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Заголовок темы</label>
+        <input type="text" name="title" placeholder="Краткое и понятное название темы"
+               style="width:100%;background:var(--bg-surface);border:1px solid var(--border);
+                      border-radius:8px;padding:10px 14px;font-size:14px;outline:none;" required>
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px;color:var(--text-light);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Первое сообщение</label>
+        <textarea name="text" placeholder="Подробно опишите тему..."
+                  style="width:100%;background:var(--bg-surface);border:1px solid var(--border);
+                         border-radius:8px;padding:10px 14px;font-size:14px;resize:vertical;
+                         min-height:150px;font-family:inherit;outline:none;" required></textarea>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button style="background:var(--accent);color:#fff;border:none;border-radius:8px;
+                       padding:10px 24px;font-size:14px;font-weight:500;cursor:pointer;">
+          Создать тему
+        </button>
+        <a href="{% url 'forum_category' category.slug %}"
+           style="background:var(--bg-surface);border:1px solid var(--border);color:var(--text-muted);
+                  border-radius:8px;padding:10px 20px;font-size:14px;text-decoration:none;">
+          Отмена
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

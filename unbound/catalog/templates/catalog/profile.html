@@ -52,6 +52,11 @@
           {% if friendship_status == 'accepted' %}
             <span style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);
                          border-radius:8px;padding:6px 14px;font-size:13px;">✓ Друзья</span>
+            <a href="{% url 'conversation' profile_user.pk %}"
+               style="background:var(--accent);color:#fff;border-radius:8px;
+                      padding:6px 16px;font-size:13px;text-decoration:none;font-weight:500;">
+              💬 Написать
+            </a>
             <form method="post" action="{% url 'friend_remove' profile_user.pk %}">
               {% csrf_token %}
               <button style="border:1px solid #fca5a5;background:transparent;color:var(--danger);

@@ -1,0 +1,74 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Диалог с {{ other.username }} — Unbound{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+
+  <!-- Шапка диалога -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;
+              padding-bottom:16px;border-bottom:1px solid var(--border);">
+    <a href="{% url 'messages_list' %}"
+       style="color:var(--text-light);text-decoration:none;font-size:20px;">←</a>
+    {% if other.avatar %}
+      <img src="{{ other.avatar.url }}" style="width:40px;height:40px;border-radius:9px;object-fit:cover;">
+    {% else %}
+      <div style="width:40px;height:40px;border-radius:9px;background:var(--accent);
+                  display:flex;align-items:center;justify-content:center;
+                  font-size:16px;font-weight:600;color:#fff;">{{ other.username|first|upper }}</div>
+    {% endif %}
+    <div>
+      <a href="{% url 'profile' other.pk %}"
+         style="font-size:15px;font-weight:600;color:var(--text-main);text-decoration:none;">
+        {{ other.username }}
+      </a>
+    </div>
+  </div>
+
+  <!-- Сообщения -->
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;
+              min-height:300px;max-height:500px;overflow-y:auto;padding:4px;"
+       id="msgs-container">
+    {% for msg in msgs %}
+    <div style="display:flex;{% if msg.sender == user %}justify-content:flex-end;{% endif %}">
+      <div style="max-width:70%;padding:10px 14px;border-radius:12px;
+                  {% if msg.sender == user %}
+                    background:var(--accent);color:#fff;border-bottom-right-radius:4px;
+                  {% else %}
+                    background:#fff;color:var(--text-main);border:1px solid var(--border);border-bottom-left-radius:4px;
+                  {% endif %}">
+        <div style="font-size:14px;line-height:1.5;">{{ msg.text }}</div>
+        <div style="font-size:10px;margin-top:4px;
+                    {% if msg.sender == user %}color:rgba(255,255,255,.7);text-align:right;
+                    {% else %}color:var(--text-light);{% endif %}">
+          {{ msg.created_at|date:"d.m H:i" }}
+          {% if msg.sender == user %}{% if msg.is_read %} ✓✓{% else %} ✓{% endif %}{% endif %}
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div style="text-align:center;padding:40px;color:var(--text-light);font-size:13px;">
+      Начните переписку первым!
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Форма отправки -->
+  <form method="post" style="display:flex;gap:10px;align-items:flex-end;">
+    {% csrf_token %}
+    <textarea name="text" placeholder="Написать сообщение..."
+              style="flex:1;background:#fff;border:1px solid var(--border);border-radius:10px;
+                     padding:10px 14px;font-size:14px;resize:none;height:50px;
+                     font-family:inherit;outline:none;"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.submit();}"></textarea>
+    <button style="background:var(--accent);color:#fff;border:none;border-radius:10px;
+                   padding:12px 20px;font-size:14px;cursor:pointer;white-space:nowrap;">
+      Отправить
+    </button>
+  </form>
+</div>
+
+<script>
+// Прокрутка вниз при загрузке
+var c = document.getElementById('msgs-container');
+if(c) c.scrollTop = c.scrollHeight;
+</script>
+{% endblock %}

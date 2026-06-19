@@ -27,7 +27,16 @@
     <a style="font-size:13px;color:{% if request.resolver_match.url_name == 'library' %}#fff{% else %}#999{% endif %};text-decoration:none;white-space:nowrap;"
        href="{% url 'library' %}">Библиотека</a>
     <a style="font-size:13px;color:{% if request.resolver_match.url_name == 'community' %}#fff{% else %}#999{% endif %};text-decoration:none;white-space:nowrap;"
-       href="{% url 'community' %}">Сообщество</a>
+       href="{% url 'community' %}">Игроки</a>
+    <a style="font-size:13px;color:{% if 'forum' in request.resolver_match.url_name %}#fff{% else %}#999{% endif %};text-decoration:none;white-space:nowrap;"
+       href="{% url 'forum_index' %}">Форум</a>
+    <a style="font-size:13px;color:{% if 'messages' in request.resolver_match.url_name or request.resolver_match.url_name == 'conversation' %}#fff{% else %}#999{% endif %};text-decoration:none;white-space:nowrap;position:relative;display:inline-flex;align-items:center;gap:5px;"
+       href="{% url 'messages_list' %}">
+      Сообщения
+      {% if unread_messages %}
+      <span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:600;">{{ unread_messages }}</span>
+      {% endif %}
+    </a>
     {% if user.is_developer %}
     <a style="font-size:13px;color:{% if request.resolver_match.url_name == 'studio' or request.resolver_match.url_name|slice:':6' == 'studio' %}#4ade4a{% else %}#a78bfa{% endif %};text-decoration:none;white-space:nowrap;font-weight:500;"
        href="{% url 'studio' %}">🛠 Студия</a>
@@ -66,6 +75,17 @@
         + Игру
       </a>
       {% endif %}
+      <a href="{% url 'notifications' %}"
+         style="position:relative;text-decoration:none;display:flex;align-items:center;padding:2px 6px;">
+        <span style="font-size:18px;color:#999;">🔔</span>
+        {% if unread_notifications %}
+        <span style="position:absolute;top:-2px;right:0;background:#dc2626;color:#fff;
+                     border-radius:50%;min-width:16px;height:16px;font-size:10px;
+                     display:flex;align-items:center;justify-content:center;font-weight:600;padding:0 3px;">
+          {{ unread_notifications }}
+        </span>
+        {% endif %}
+      </a>
       <a href="{% url 'profile' user.pk %}"
          style="display:flex;align-items:center;gap:6px;text-decoration:none;">
         {% if user.avatar %}

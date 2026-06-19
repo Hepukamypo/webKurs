@@ -1,0 +1,41 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Уведомления — Unbound{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+  <h1 style="font-size:20px;font-weight:600;margin-bottom:20px;">Уведомления</h1>
+  {% if notifs %}
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    {% for n in notifs %}
+    <a href="{{ n.link }}" style="text-decoration:none;">
+      <div class="card-surface p-3 rounded-3"
+           style="display:flex;align-items:center;gap:12px;
+                  {% if not n.is_read %}background:#f0f7f0;border-color:var(--accent);{% endif %}">
+        <div style="font-size:24px;flex-shrink:0;">
+          {% if n.type == 'message' %}💬
+          {% elif n.type == 'forum_reply' %}📝
+          {% elif n.type == 'friend_req' %}👥
+          {% elif n.type == 'friend_accept' %}✅
+          {% elif n.type == 'achievement' %}🏆
+          {% elif n.type == 'game_approved' %}✅
+          {% elif n.type == 'game_rejected' %}❌
+          {% else %}🔔{% endif %}
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:14px;color:var(--text-main);">{{ n.text }}</div>
+          <div style="font-size:11px;color:var(--text-light);margin-top:2px;">{{ n.created_at|date:"d.m.Y H:i" }}</div>
+        </div>
+        {% if not n.is_read %}
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:60px;color:var(--text-light);">
+    <div style="font-size:48px;margin-bottom:12px;">🔔</div>
+    <p style="font-size:14px;">Уведомлений пока нет.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

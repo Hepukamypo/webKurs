@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
 
 load_dotenv()
 
@@ -8,7 +9,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-me-in-production')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = ['*']
+
+# Railway отдаёт публичный домен в переменной RAILWAY_PUBLIC_DOMAIN
+RAILWAY_PUBLIC_DOMAIN = os.getenv('RAILWAY_PUBLIC_DOMAIN')
+
+ALLOWED_HOSTS = ['*'] if DEBUG else [
+    h for h in [RAILWAY_PUBLIC_DOMAIN, 'localhost', '127.0.0.1'] if h
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    f'https://{RAILWAY_PUBLIC_DOMAIN}'
+] if RAILWAY_PUBLIC_DOMAIN else []
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -42,6 +53,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'catalog.context_processors.notifications',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -52,14 +64,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'unbound.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME':     os.getenv('DB_NAME', 'unbound_db'),
-        'USER':     os.getenv('DB_USER', 'postgres'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
-        'HOST':     os.getenv('DB_HOST', 'localhost'),
-        'PORT':     os.getenv('DB_PORT', '5432'),
-    }
+    'default': dj_database_url.config(
+        default=(
+            f"postgresql://{os.getenv('DB_USER', 'postgres')}:"
+            f"{os.getenv('DB_PASSWORD', '')}@"
+            f"{os.getenv('DB_HOST', 'localhost')}:"
+            f"{os.getenv('DB_PORT', '5432')}/"
+            f"{os.getenv('DB_NAME', 'unbound_db')}"
+        ),
+        conn_max_age=600,
+    )
 }
 
 AUTH_USER_MODEL = 'catalog.User'
@@ -89,3 +103,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL           = '/login/'
 LOGIN_REDIRECT_URL  = '/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True

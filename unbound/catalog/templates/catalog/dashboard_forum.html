@@ -1,0 +1,168 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Управление форумом — Unbound{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:200px 1fr;gap:0;margin:-24px;min-height:calc(100vh - 52px);">
+  {% include "catalog/dashboard_sidebar.html" %}
+  <div style="padding:24px;background:var(--bg-page);">
+
+    <h1 style="font-size:18px;font-weight:600;margin-bottom:20px;">Управление форумом</h1>
+
+    <!-- Форма создания раздела -->
+    <div class="card-surface p-4 rounded-3 mb-4">
+      <div style="font-size:14px;font-weight:500;margin-bottom:16px;">+ Создать раздел</div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_category">
+        <div style="display:grid;grid-template-columns:1fr 2fr 80px 80px auto;gap:12px;align-items:end;">
+          <div>
+            <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Иконка</label>
+            <input type="text" name="icon" value="💬" maxlength="10"
+                   style="width:100%;background:var(--bg-surface);border:1px solid var(--border);
+                          border-radius:7px;padding:8px 12px;font-size:20px;text-align:center;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Название раздела</label>
+            <input type="text" name="name" placeholder="Например: Общее" required
+                   style="width:100%;background:var(--bg-surface);border:1px solid var(--border);
+                          border-radius:7px;padding:9px 12px;font-size:14px;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Порядок</label>
+            <input type="number" name="order" value="0" min="0"
+                   style="width:100%;background:var(--bg-surface);border:1px solid var(--border);
+                          border-radius:7px;padding:9px 12px;font-size:14px;outline:none;">
+          </div>
+          <div style="grid-column:span 1;">
+            <button style="background:var(--accent);color:#fff;border:none;border-radius:7px;
+                           padding:9px 20px;font-size:14px;font-weight:500;cursor:pointer;width:100%;white-space:nowrap;">
+              Создать
+            </button>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px;">Описание</label>
+          <input type="text" name="description" placeholder="Краткое описание раздела"
+                 style="width:100%;background:var(--bg-surface);border:1px solid var(--border);
+                        border-radius:7px;padding:9px 12px;font-size:14px;outline:none;">
+        </div>
+      </form>
+    </div>
+
+    <!-- Список разделов -->
+    {% if categories %}
+    <div class="card-surface rounded-3" style="overflow:hidden;">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;">
+        Разделы форума ({{ categories.count }})
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#faf8f5;">
+            <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Раздел</th>
+            <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Описание</th>
+            <th style="text-align:center;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Тем</th>
+            <th style="text-align:center;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Постов</th>
+            <th style="text-align:left;padding:10px 18px;font-weight:500;color:var(--text-light);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border);">Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cat in categories %}
+          <tr style="border-bottom:0.5px solid var(--border);" id="row-{{ cat.pk }}">
+            <td style="padding:12px 18px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:22px;">{{ cat.icon }}</span>
+                <div>
+                  <div style="font-weight:500;">{{ cat.name }}</div>
+                  <div style="font-size:11px;color:var(--text-light);">slug: {{ cat.slug }} · порядок: {{ cat.order }}</div>
+                </div>
+              </div>
+            </td>
+            <td style="padding:12px 18px;color:var(--text-muted);">{{ cat.description|default:"—" }}</td>
+            <td style="padding:12px 18px;text-align:center;font-weight:500;color:var(--accent);">{{ cat.thread_count }}</td>
+            <td style="padding:12px 18px;text-align:center;font-weight:500;">{{ cat.post_count }}</td>
+            <td style="padding:12px 18px;">
+              <div style="display:flex;gap:6px;align-items:center;">
+                <a href="{% url 'forum_category' cat.slug %}" target="_blank"
+                   style="border:1px solid var(--border);border-radius:5px;padding:4px 10px;
+                          font-size:12px;text-decoration:none;color:var(--text-muted);">
+                  Открыть
+                </a>
+                <button onclick="toggleEdit({{ cat.pk }})"
+                        style="border:1px solid var(--border);background:var(--bg-card);border-radius:5px;
+                               padding:4px 10px;font-size:12px;cursor:pointer;color:var(--text-muted);">
+                  ✏ Изменить
+                </button>
+                <form method="post" style="display:inline;" onsubmit="return confirm('Удалить раздел «{{ cat.name }}» и все темы в нём?')">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_category">
+                  <input type="hidden" name="pk" value="{{ cat.pk }}">
+                  <button style="border:1px solid #fca5a5;background:transparent;color:var(--danger);
+                                 border-radius:5px;padding:4px 10px;font-size:12px;cursor:pointer;">
+                    🗑
+                  </button>
+                </form>
+              </div>
+
+              <!-- Форма редактирования (скрыта) -->
+              <div id="edit-{{ cat.pk }}" style="display:none;margin-top:10px;padding:12px;
+                   background:var(--bg-surface);border-radius:8px;">
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="edit_category">
+                  <input type="hidden" name="pk" value="{{ cat.pk }}">
+                  <div style="display:grid;grid-template-columns:60px 1fr 70px;gap:8px;margin-bottom:8px;">
+                    <div>
+                      <label style="font-size:10px;color:var(--text-light);display:block;margin-bottom:3px;">Иконка</label>
+                      <input type="text" name="icon" value="{{ cat.icon }}" maxlength="10"
+                             style="width:100%;background:#fff;border:1px solid var(--border);
+                                    border-radius:6px;padding:6px;font-size:18px;text-align:center;">
+                    </div>
+                    <div>
+                      <label style="font-size:10px;color:var(--text-light);display:block;margin-bottom:3px;">Название</label>
+                      <input type="text" name="name" value="{{ cat.name }}" required
+                             style="width:100%;background:#fff;border:1px solid var(--border);
+                                    border-radius:6px;padding:7px 10px;font-size:13px;">
+                    </div>
+                    <div>
+                      <label style="font-size:10px;color:var(--text-light);display:block;margin-bottom:3px;">Порядок</label>
+                      <input type="number" name="order" value="{{ cat.order }}"
+                             style="width:100%;background:#fff;border:1px solid var(--border);
+                                    border-radius:6px;padding:7px;font-size:13px;">
+                    </div>
+                  </div>
+                  <div style="margin-bottom:8px;">
+                    <label style="font-size:10px;color:var(--text-light);display:block;margin-bottom:3px;">Описание</label>
+                    <input type="text" name="description" value="{{ cat.description }}"
+                           style="width:100%;background:#fff;border:1px solid var(--border);
+                                  border-radius:6px;padding:7px 10px;font-size:13px;">
+                  </div>
+                  <button style="background:var(--accent);color:#fff;border:none;border-radius:6px;
+                                 padding:6px 16px;font-size:12px;cursor:pointer;">Сохранить</button>
+                  <button type="button" onclick="toggleEdit({{ cat.pk }})"
+                          style="background:transparent;border:1px solid var(--border);border-radius:6px;
+                                 padding:6px 12px;font-size:12px;cursor:pointer;margin-left:6px;">Отмена</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card-surface p-5 rounded-3" style="text-align:center;">
+      <div style="font-size:48px;margin-bottom:12px;">💬</div>
+      <p style="color:var(--text-muted);font-size:14px;">Разделов форума пока нет. Создайте первый выше.</p>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+function toggleEdit(pk) {
+  var el = document.getElementById('edit-' + pk);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

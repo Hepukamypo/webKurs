@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Game, Screenshot, Achievement, UserAchievement, Purchase, Review, Friendship
+from .models import (User, Game, Screenshot, Achievement, UserAchievement,
+                   Purchase, Review, Friendship,
+                   ForumCategory, ForumThread, ForumPost, Notification)
 
 
 @admin.register(User)
@@ -57,3 +59,19 @@ class ReviewAdmin(admin.ModelAdmin):
 class FriendshipAdmin(admin.ModelAdmin):
     list_display = ('from_user', 'to_user', 'status', 'created_at')
     list_filter  = ('status',)
+
+
+@admin.register(ForumCategory)
+class ForumCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'icon', 'order')
+    prepopulated_fields = {'slug': ('name',)}
+
+@admin.register(ForumThread)
+class ForumThreadAdmin(admin.ModelAdmin):
+    list_display = ('title', 'category', 'author', 'is_pinned', 'is_closed', 'created_at')
+    list_filter  = ('category', 'is_pinned', 'is_closed')
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('recipient', 'type', 'text', 'is_read', 'created_at')
+    list_filter  = ('type', 'is_read')

@@ -7,7 +7,9 @@ from django.db.models import Avg, Count, Sum, Q
 from functools import wraps
 
 from .models import (Game, Achievement, UserAchievement,
-                     Purchase, Review, Friendship, User, Screenshot)
+                     Purchase, Review, Friendship, User, Screenshot,
+                     Conversation, Message, ForumCategory, ForumThread,
+                     ForumPost, Notification)
 from .forms import (RegisterForm, GameForm, ReviewForm,
                     ProfileForm, ScreenshotForm, AchievementForm)
 
@@ -376,8 +378,15 @@ def profile_edit(request):
 def friend_request(request, user_id):
     to_user = get_object_or_404(User, pk=user_id)
     if to_user != request.user:
-        Friendship.objects.get_or_create(
+        _, created = Friendship.objects.get_or_create(
             from_user=request.user, to_user=to_user, defaults={'status': 'pending'})
+        if created:
+            Notification.create(
+                recipient=to_user,
+                ntype='friend_req',
+                text=f'{request.user.username} хочет добавить вас в друзья',
+                link=f'/profile/{request.user.pk}/'
+            )
     return redirect('profile', pk=user_id)
 
 
@@ -389,6 +398,12 @@ def friend_respond(request, friendship_id, action):
         friendship.save()
         check_and_unlock(request.user, 'add_friend')
         check_and_unlock(friendship.from_user, 'add_friend')
+        Notification.create(
+            recipient=friendship.from_user,
+            ntype='friend_accept',
+            text=f'{request.user.username} принял вашу заявку в друзья',
+            link=f'/profile/{request.user.pk}/'
+        )
     elif action == 'decline':
         friendship.status = 'declined'
         friendship.save()
@@ -494,6 +509,13 @@ def game_approve(request, pk):
         game.status = 'published'
         game.rejection_reason = ''
         game.save()
+        if game.developer_user:
+            Notification.create(
+                recipient=game.developer_user,
+                ntype='game_approved',
+                text=f'Ваша игра «{game.title}» одобрена и опубликована!',
+                link=f'/game/{game.pk}/'
+            )
     return redirect('game_moderation')
 
 
@@ -501,9 +523,17 @@ def game_approve(request, pk):
 def game_reject(request, pk):
     game = get_object_or_404(Game, pk=pk)
     if request.method == 'POST':
+        reason = request.POST.get('reason', '').strip()
         game.status = 'rejected'
-        game.rejection_reason = request.POST.get('reason', '').strip()
+        game.rejection_reason = reason
         game.save()
+        if game.developer_user:
+            Notification.create(
+                recipient=game.developer_user,
+                ntype='game_rejected',
+                text=f'Игра «{game.title}» отклонена' + (f': {reason}' if reason else ''),
+                link=f'/studio/'
+            )
     return redirect('game_moderation')
 
 
@@ -621,3 +651,252 @@ def developer_page(request, username):
         'dev': dev, 'games': games,
         'total_purchases': total_purchases, 'total_reviews': total_reviews,
     })
+
+
+# ── Уведомления ───────────────────────────────────────────────────────────────
+
+@login_required
+def notifications_view(request):
+    notifs = Notification.objects.filter(
+        recipient=request.user).order_by('-created_at')
+    # Помечаем все как прочитанные
+    notifs.filter(is_read=False).update(is_read=True)
+    return render(request, 'catalog/notifications.html',
+                  {'notifs': notifs})
+
+
+# ── Личные сообщения ──────────────────────────────────────────────────────────
+
+@login_required
+def messages_list(request):
+    """Список всех диалогов."""
+    convs = Conversation.objects.filter(
+        participants=request.user
+    ).prefetch_related('participants', 'messages').order_by('-updated_at')
+    return render(request, 'catalog/messages_list.html',
+                  {'convs': convs})
+
+
+@login_required
+def conversation_view(request, user_id):
+    """Диалог с конкретным пользователем."""
+    other = get_object_or_404(User, pk=user_id)
+    if other == request.user:
+        return redirect('messages_list')
+
+    # Найти или создать диалог
+    conv = Conversation.objects.filter(
+        participants=request.user
+    ).filter(participants=other).first()
+
+    if not conv:
+        conv = Conversation.objects.create()
+        conv.participants.add(request.user, other)
+
+    # Помечаем входящие как прочитанные
+    conv.messages.filter(
+        is_read=False).exclude(sender=request.user).update(is_read=True)
+
+    if request.method == 'POST':
+        text = request.POST.get('text', '').strip()
+        if text:
+            Message.objects.create(
+                conversation=conv,
+                sender=request.user,
+                text=text
+            )
+            conv.save()  # обновляем updated_at
+            # Уведомление собеседнику
+            Notification.create(
+                recipient=other,
+                ntype='message',
+                text=f'{request.user.username} написал вам сообщение',
+                link=f'/messages/{request.user.pk}/'
+            )
+        return redirect('conversation', user_id=user_id)
+
+    messages_qs = conv.messages.select_related('sender').all()
+    return render(request, 'catalog/conversation.html', {
+        'conv':    conv,
+        'other':   other,
+        'msgs':    messages_qs,
+    })
+
+
+# ── Форум ─────────────────────────────────────────────────────────────────────
+
+def forum_index(request):
+    """Главная форума — все разделы."""
+    categories = ForumCategory.objects.annotate(
+        thread_count=Count('threads', distinct=True),
+        post_count=Count('threads__posts', distinct=True),
+    )
+    return render(request, 'catalog/forum_index.html',
+                  {'categories': categories})
+
+
+def forum_category(request, slug):
+    """Список тем в разделе."""
+    category = get_object_or_404(ForumCategory, slug=slug)
+    threads  = ForumThread.objects.filter(category=category)                                  .select_related('author')                                  .annotate(
+                                      post_count=Count('posts', distinct=True)
+                                  ).order_by('-is_pinned', '-updated_at')
+    return render(request, 'catalog/forum_category.html', {
+        'category': category,
+        'threads':  threads,
+    })
+
+
+def forum_thread(request, pk):
+    """Просмотр темы с постами."""
+    thread = get_object_or_404(ForumThread, pk=pk)
+    posts  = thread.posts.select_related('author').prefetch_related('likes')
+
+    if request.method == 'POST' and request.user.is_authenticated:
+        if not thread.is_closed or request.user.is_admin():
+            text = request.POST.get('text', '').strip()
+            if text:
+                ForumPost.objects.create(
+                    thread=thread,
+                    author=request.user,
+                    text=text
+                )
+                thread.save()  # обновляем updated_at
+                # Уведомляем автора темы
+                if thread.author != request.user:
+                    Notification.create(
+                        recipient=thread.author,
+                        ntype='forum_reply',
+                        text=f'{request.user.username} ответил в теме «{thread.title[:50]}»',
+                        link=f'/forum/thread/{thread.pk}/'
+                    )
+        return redirect('forum_thread', pk=pk)
+
+    user_liked = set()
+    if request.user.is_authenticated:
+        user_liked = set(
+            posts.filter(likes=request.user).values_list('pk', flat=True)
+        )
+
+    return render(request, 'catalog/forum_thread.html', {
+        'thread':     thread,
+        'posts':      posts,
+        'user_liked': user_liked,
+    })
+
+
+@login_required
+def forum_thread_create(request, slug):
+    """Создать новую тему."""
+    category = get_object_or_404(ForumCategory, slug=slug)
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        text  = request.POST.get('text', '').strip()
+        if title and text:
+            thread = ForumThread.objects.create(
+                category=category,
+                author=request.user,
+                title=title
+            )
+            ForumPost.objects.create(
+                thread=thread,
+                author=request.user,
+                text=text
+            )
+            return redirect('forum_thread', pk=thread.pk)
+    return render(request, 'catalog/forum_thread_create.html',
+                  {'category': category})
+
+
+@login_required
+def forum_post_like(request, pk):
+    """Лайк поста."""
+    post = get_object_or_404(ForumPost, pk=pk)
+    if request.method == 'POST':
+        if request.user in post.likes.all():
+            post.likes.remove(request.user)
+        else:
+            post.likes.add(request.user)
+    return redirect('forum_thread', pk=post.thread.pk)
+
+
+@admin_required
+def forum_thread_pin(request, pk):
+    thread = get_object_or_404(ForumThread, pk=pk)
+    if request.method == 'POST':
+        thread.is_pinned = not thread.is_pinned
+        thread.save()
+    return redirect('forum_thread', pk=pk)
+
+
+@admin_required
+def forum_thread_close(request, pk):
+    thread = get_object_or_404(ForumThread, pk=pk)
+    if request.method == 'POST':
+        thread.is_closed = not thread.is_closed
+        thread.save()
+    return redirect('forum_thread', pk=pk)
+
+
+@admin_required
+def forum_post_delete(request, pk):
+    post = get_object_or_404(ForumPost, pk=pk)
+    thread_pk = post.thread.pk
+    if request.method == 'POST':
+        post.delete()
+    return redirect('forum_thread', pk=thread_pk)
+
+
+# ── Управление форумом (admin) ────────────────────────────────────────────────
+
+@admin_required
+def dashboard_forum(request):
+    """Управление разделами форума."""
+    from django.utils.text import slugify
+    import uuid
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'create_category':
+            name = request.POST.get('name', '').strip()
+            desc = request.POST.get('description', '').strip()
+            icon = request.POST.get('icon', '💬').strip()
+            order = int(request.POST.get('order', 0))
+            if name:
+                # Генерируем slug из uuid — надёжно для любого языка
+                slug = f'cat-{uuid.uuid4().hex[:8]}'
+                # Уникальность slug
+                base_slug = slug
+                counter = 1
+                while ForumCategory.objects.filter(slug=slug).exists():
+                    slug = f'{base_slug}-{counter}'
+                    counter += 1
+                ForumCategory.objects.create(
+                    name=name, slug=slug,
+                    description=desc, icon=icon, order=order)
+
+        elif action == 'delete_category':
+            pk = request.POST.get('pk')
+            ForumCategory.objects.filter(pk=pk).delete()
+
+        elif action == 'edit_category':
+            pk   = request.POST.get('pk')
+            name = request.POST.get('name', '').strip()
+            desc = request.POST.get('description', '').strip()
+            icon = request.POST.get('icon', '💬').strip()
+            order = int(request.POST.get('order', 0))
+            if name and pk:
+                ForumCategory.objects.filter(pk=pk).update(
+                    name=name, description=desc,
+                    icon=icon, order=order)
+
+        return redirect('dashboard_forum')
+
+    categories = ForumCategory.objects.annotate(
+        thread_count=Count('threads', distinct=True),
+        post_count=Count('threads__posts', distinct=True),
+    ).order_by('order')
+
+    return render(request, 'catalog/dashboard_forum.html',
+                  {'categories': categories})

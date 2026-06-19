@@ -63,6 +63,25 @@ urlpatterns = [
     path('profile/<int:pk>/',          views.profile_view,      name='profile'),
     path('profile/edit/',              views.profile_edit,      name='profile_edit'),
 
+    path('dashboard/forum/',              views.dashboard_forum,        name='dashboard_forum'),
+
+    # Уведомления
+    path('notifications/',                 views.notifications_view,   name='notifications'),
+
+    # Личные сообщения
+    path('messages/',                      views.messages_list,        name='messages_list'),
+    path('messages/<int:user_id>/',        views.conversation_view,    name='conversation'),
+
+    # Форум
+    path('forum/',                         views.forum_index,          name='forum_index'),
+    path('forum/<str:slug>/',              views.forum_category,       name='forum_category'),
+    path('forum/<str:slug>/new/',          views.forum_thread_create,  name='forum_thread_create'),
+    path('forum/thread/<int:pk>/',         views.forum_thread,         name='forum_thread'),
+    path('forum/thread/<int:pk>/pin/',     views.forum_thread_pin,     name='forum_thread_pin'),
+    path('forum/thread/<int:pk>/close/',   views.forum_thread_close,   name='forum_thread_close'),
+    path('forum/post/<int:pk>/like/',      views.forum_post_like,      name='forum_post_like'),
+    path('forum/post/<int:pk>/delete/',    views.forum_post_delete,    name='forum_post_delete'),
+
     # Социальный модуль
     path('friend/request/<int:user_id>/',                      views.friend_request, name='friend_request'),
     path('friend/respond/<int:friendship_id>/<str:action>/',   views.friend_respond, name='friend_respond'),

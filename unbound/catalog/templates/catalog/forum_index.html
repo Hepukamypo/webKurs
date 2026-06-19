@@ -1,0 +1,44 @@
+{% extends 'catalog/base.html' %}
+{% block title %}Форум — Unbound{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+  <h1 style="font-size:20px;font-weight:600;">Форум сообщества</h1>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;">
+  {% for cat in categories %}
+  <a href="{% url 'forum_category' cat.slug %}" style="text-decoration:none;">
+    <div class="card-surface p-4 rounded-3"
+         style="display:flex;align-items:center;gap:16px;transition:border-color .15s;"
+         onmouseover="this.style.borderColor='var(--accent)'"
+         onmouseout="this.style.borderColor='var(--border)'">
+      <div style="width:52px;height:52px;border-radius:12px;background:var(--accent-soft);
+                  display:flex;align-items:center;justify-content:center;
+                  font-size:26px;flex-shrink:0;">{{ cat.icon }}</div>
+      <div style="flex:1;">
+        <div style="font-size:16px;font-weight:600;color:var(--text-main);margin-bottom:3px;">{{ cat.name }}</div>
+        {% if cat.description %}
+        <div style="font-size:13px;color:var(--text-muted);">{{ cat.description }}</div>
+        {% endif %}
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:20px;font-weight:600;color:var(--accent);">{{ cat.thread_count }}</div>
+        <div style="font-size:11px;color:var(--text-light);">тем</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;margin-left:16px;">
+        <div style="font-size:20px;font-weight:600;color:var(--text-main);">{{ cat.post_count }}</div>
+        <div style="font-size:11px;color:var(--text-light);">сообщений</div>
+      </div>
+      <div style="color:var(--text-light);font-size:18px;">›</div>
+    </div>
+  </a>
+  {% empty %}
+  <div style="text-align:center;padding:60px;color:var(--text-light);">
+    <p>Разделы форума пока не созданы.</p>
+    {% if user.is_admin %}
+    <a href="/admin/catalog/forumcategory/add/" style="color:var(--accent);">Создать раздел →</a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
