@@ -3,7 +3,55 @@
 {% block content %}
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
   <h1 style="font-size:20px;font-weight:600;">Форум сообщества</h1>
+  {% if user.is_admin %}
+  <button onclick="document.getElementById('modal-cat').style.display='flex'"
+          style="background:var(--accent);color:#fff;border:none;border-radius:8px;
+                 padding:8px 16px;font-size:13px;cursor:pointer;">+ Создать раздел</button>
+  {% endif %}
 </div>
+
+{% if user.is_admin %}
+<!-- Модальное окно создания раздела -->
+<div id="modal-cat" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+     z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px;width:420px;max-width:95vw;">
+    <h2 style="font-size:16px;font-weight:600;margin-bottom:20px;">Новый раздел форума</h2>
+    <form method="post" action="{% url 'dashboard_forum' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_category">
+      <div style="margin-bottom:14px;">
+        <label style="font-size:13px;color:#555;display:block;margin-bottom:4px;">Название</label>
+        <input name="name" required style="width:100%;border:1px solid #ddd;border-radius:8px;
+               padding:8px 12px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:13px;color:#555;display:block;margin-bottom:4px;">Описание</label>
+        <input name="description" style="width:100%;border:1px solid #ddd;border-radius:8px;
+               padding:8px 12px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:20px;">
+        <div style="flex:1;">
+          <label style="font-size:13px;color:#555;display:block;margin-bottom:4px;">Иконка</label>
+          <input name="icon" value="💬" style="width:100%;border:1px solid #ddd;border-radius:8px;
+                 padding:8px 12px;font-size:14px;box-sizing:border-box;">
+        </div>
+        <div style="width:80px;">
+          <label style="font-size:13px;color:#555;display:block;margin-bottom:4px;">Порядок</label>
+          <input name="order" type="number" value="0" style="width:100%;border:1px solid #ddd;
+                 border-radius:8px;padding:8px 12px;font-size:14px;box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" onclick="document.getElementById('modal-cat').style.display='none'"
+                style="background:none;border:1px solid #ddd;border-radius:8px;
+                       padding:8px 16px;font-size:13px;cursor:pointer;">Отмена</button>
+        <button type="submit" style="background:var(--accent);color:#fff;border:none;
+                border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;">Создать</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 
 <div style="display:flex;flex-direction:column;gap:12px;">
   {% for cat in categories %}
@@ -36,7 +84,9 @@
   <div style="text-align:center;padding:60px;color:var(--text-light);">
     <p>Разделы форума пока не созданы.</p>
     {% if user.is_admin %}
-    <a href="/admin/catalog/forumcategory/add/" style="color:var(--accent);">Создать раздел →</a>
+    <button onclick="document.getElementById('modal-cat').style.display='flex'"
+            style="background:var(--accent);color:#fff;border:none;border-radius:8px;
+                   padding:8px 16px;font-size:13px;cursor:pointer;margin-top:12px;">Создать раздел →</button>
     {% endif %}
   </div>
   {% endfor %}
