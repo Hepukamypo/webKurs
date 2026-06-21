@@ -126,8 +126,9 @@
 
   // WebSocket
   var ws;
-  var pingInterval = null;
-  var messageQueue = [];  // очередь сообщений пока WS не открыт
+  var pingInterval  = null;
+  var statusTimer   = null;
+  var messageQueue  = [];
 
   function flushQueue() {
     while (messageQueue.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
@@ -140,7 +141,7 @@
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'ping' }));
       }
-    }, 25000);
+    }, 15000);
   }
 
   function stopPing() {
@@ -151,17 +152,22 @@
     ws = new WebSocket(wsUrl);
 
     ws.onopen = function () {
+      // Сбрасываем таймер показа "переподключение" — соединение восстановлено быстро
+      if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
       status.textContent = 'онлайн';
       status.style.color = '#22c55e';
       startPing();
-      flushQueue();  // отправляем накопившиеся сообщения
+      flushQueue();
     };
 
     ws.onclose = function () {
       stopPing();
-      status.textContent = 'переподключение…';
-      status.style.color = '#ef4444';
-      setTimeout(connect, 2000);
+      // Показываем "переподключение" только если разрыв длится дольше 3 секунд
+      statusTimer = setTimeout(function () {
+        status.textContent = 'переподключение…';
+        status.style.color = '#ef4444';
+      }, 3000);
+      setTimeout(connect, 1000);
     };
 
     ws.onerror = function () { ws.close(); };
