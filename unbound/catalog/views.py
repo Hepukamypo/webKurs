@@ -684,6 +684,15 @@ def conversation_view(request, user_id):
     if other == request.user:
         return redirect('messages_list')
 
+    # Доступ только между друзьями (либо если текущий пользователь — админ)
+    is_friend = Friendship.objects.filter(
+        Q(from_user=request.user, to_user=other, status='accepted') |
+        Q(from_user=other, to_user=request.user, status='accepted')
+    ).exists()
+    if not is_friend and not request.user.is_admin():
+        return render(request, 'catalog/conversation.html',
+                      {'error': True, 'other': other})
+
     # Найти или создать диалог
     conv = Conversation.objects.filter(
         participants=request.user
