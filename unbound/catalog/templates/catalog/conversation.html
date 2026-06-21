@@ -127,7 +127,13 @@
   // WebSocket
   var ws;
   var pingInterval = null;
-  var wasConnected = false;
+  var messageQueue = [];  // очередь сообщений пока WS не открыт
+
+  function flushQueue() {
+    while (messageQueue.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ text: messageQueue.shift() }));
+    }
+  }
 
   function startPing() {
     pingInterval = setInterval(function () {
@@ -145,23 +151,17 @@
     ws = new WebSocket(wsUrl);
 
     ws.onopen = function () {
-      // Если до этого было соединение и оно оборвалось — перезагружаем страницу
-      // чтобы подтянуть сообщения которые пришли пока были offline
-      if (wasConnected) {
-        location.reload();
-        return;
-      }
-      wasConnected = true;
       status.textContent = 'онлайн';
       status.style.color = '#22c55e';
       startPing();
+      flushQueue();  // отправляем накопившиеся сообщения
     };
 
     ws.onclose = function () {
       stopPing();
-      status.textContent = 'нет соединения — переподключение…';
+      status.textContent = 'переподключение…';
       status.style.color = '#ef4444';
-      setTimeout(connect, 3000);
+      setTimeout(connect, 2000);
     };
 
     ws.onerror = function () { ws.close(); };
@@ -177,10 +177,15 @@
   // Отправка
   function send() {
     var text = input.value.trim();
-    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ text: text }));
+    if (!text) return;
     input.value = '';
     input.style.height = '50px';
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ text: text }));
+    } else {
+      // WS не готов — кладём в очередь, отправится при reconnect
+      messageQueue.push(text);
+    }
   }
 
   sendBtn.addEventListener('click', send);
