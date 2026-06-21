@@ -126,15 +126,39 @@
 
   // WebSocket
   var ws;
+  var pingInterval = null;
+  var wasConnected = false;
+
+  function startPing() {
+    pingInterval = setInterval(function () {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 25000);
+  }
+
+  function stopPing() {
+    if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
+  }
+
   function connect() {
     ws = new WebSocket(wsUrl);
 
     ws.onopen = function () {
+      // Если до этого было соединение и оно оборвалось — перезагружаем страницу
+      // чтобы подтянуть сообщения которые пришли пока были offline
+      if (wasConnected) {
+        location.reload();
+        return;
+      }
+      wasConnected = true;
       status.textContent = 'онлайн';
       status.style.color = '#22c55e';
+      startPing();
     };
 
     ws.onclose = function () {
+      stopPing();
       status.textContent = 'нет соединения — переподключение…';
       status.style.color = '#ef4444';
       setTimeout(connect, 3000);
@@ -144,6 +168,7 @@
 
     ws.onmessage = function (e) {
       var data = JSON.parse(e.data);
+      if (data.type === 'pong') return;
       bubble(data.text, data.sender_id === ME, data.time);
     };
   }
