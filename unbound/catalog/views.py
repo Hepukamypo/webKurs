@@ -783,8 +783,7 @@ def forum_thread(request, pk):
                     author=request.user,
                     text=text
                 )
-                thread.save()  # обновляем updated_at
-                # Уведомляем автора темы
+                thread.save()
                 if thread.author != request.user:
                     Notification.create(
                         recipient=thread.author,

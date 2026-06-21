@@ -34,7 +34,7 @@
 </div>
 
 <!-- Посты -->
-<div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px;">
+<div id="posts-list" style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px;">
   {% for post in posts %}
   <div class="card-surface p-4 rounded-3" id="post-{{ post.pk }}">
     <div style="display:flex;gap:14px;">
@@ -96,17 +96,14 @@
   {% if not thread.is_closed or user.is_admin %}
   <div class="card-surface p-4 rounded-3">
     <div style="font-size:14px;font-weight:500;margin-bottom:12px;">Ваш ответ</div>
-    <form method="post">
-      {% csrf_token %}
-      <textarea name="text" placeholder="Напишите сообщение..."
-                style="width:100%;background:var(--bg-surface);border:1px solid var(--border);
-                       border-radius:8px;padding:12px;font-size:14px;resize:vertical;
-                       min-height:100px;font-family:inherit;outline:none;margin-bottom:10px;"></textarea>
-      <button style="background:var(--accent);color:#fff;border:none;border-radius:8px;
-                     padding:9px 24px;font-size:14px;font-weight:500;cursor:pointer;">
-        Отправить
-      </button>
-    </form>
+    <textarea id="forum-input" placeholder="Напишите сообщение..."
+              style="width:100%;background:var(--bg-surface);border:1px solid var(--border);
+                     border-radius:8px;padding:12px;font-size:14px;resize:vertical;
+                     min-height:100px;font-family:inherit;outline:none;margin-bottom:10px;"></textarea>
+    <button id="forum-send" style="background:var(--accent);color:#fff;border:none;border-radius:8px;
+                   padding:9px 24px;font-size:14px;font-weight:500;cursor:pointer;">
+      Отправить
+    </button>
   </div>
   {% else %}
   <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;
@@ -119,5 +116,65 @@
             background:var(--bg-surface);border-radius:8px;">
   <a href="{% url 'login' %}" style="color:var(--accent);">Войдите</a>, чтобы ответить
 </div>
+{% endif %}
+
+{% if user.is_authenticated and not thread.is_closed or user.is_authenticated and user.is_admin %}
+<script>
+(function(){
+  var input    = document.getElementById('forum-input');
+  var sendBtn  = document.getElementById('forum-send');
+  var postsList = document.getElementById('posts-list');
+  if (!input) return;
+
+  var proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  var ws = new WebSocket(proto + '://' + location.host + '/ws/forum/{{ thread.pk }}/');
+  var pingInterval = null;
+
+  ws.onopen = function(){
+    pingInterval = setInterval(function(){
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({type:'ping'}));
+    }, 15000);
+  };
+  ws.onclose = function(){ clearInterval(pingInterval); };
+
+  ws.onmessage = function(e){
+    var d = JSON.parse(e.data);
+    if (d.type === 'pong' || d.type !== 'forum_post') return;
+    var avatarHtml = d.avatar
+      ? '<img src="' + d.avatar + '" style="width:46px;height:46px;border-radius:10px;object-fit:cover;margin:0 auto;display:block;">'
+      : '<div style="width:46px;height:46px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:#fff;margin:0 auto;">' + d.author[0].toUpperCase() + '</div>';
+    var html = '<div class="card-surface p-4 rounded-3" id="post-' + d.pk + '">' +
+      '<div style="display:flex;gap:14px;">' +
+        '<div style="flex-shrink:0;width:80px;text-align:center;">' +
+          '<a href="/profile/' + d.author_pk + '/" style="text-decoration:none;">' +
+            avatarHtml +
+            '<div style="font-size:12px;font-weight:500;color:var(--text-main);margin-top:5px;">' + d.author + '</div>' +
+            '<div style="font-size:10px;color:var(--text-light);">' + d.post_count + ' постов</div>' +
+          '</a>' +
+        '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:11px;color:var(--text-light);margin-bottom:8px;">' + d.created_at + '</div>' +
+          '<div style="font-size:14px;color:var(--text-main);line-height:1.7;white-space:pre-wrap;">' + d.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
+          '<div style="margin-top:10px;"><span style="font-size:12px;color:var(--text-light);">👍 0</span></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+    postsList.insertAdjacentHTML('beforeend', html);
+    window.scrollTo(0, document.body.scrollHeight);
+  };
+
+  function send(){
+    var text = input.value.trim();
+    if (!text || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({text: text}));
+    input.value = '';
+  }
+
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); }
+  });
+})();
+</script>
 {% endif %}
 {% endblock %}
