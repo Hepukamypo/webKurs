@@ -22,12 +22,14 @@ CSRF_TRUSTED_ORIGINS = [
 ] if RAILWAY_PUBLIC_DOMAIN else []
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
     'catalog',
 ]
 
@@ -62,6 +64,23 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'unbound.wsgi.application'
+ASGI_APPLICATION = 'unbound.asgi.application'
+
+# Channel layers: Redis в продакшене, InMemory локально
+_REDIS_URL = os.getenv('REDIS_URL')
+if _REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {'hosts': [_REDIS_URL]},
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }
 
 DATABASES = {
     'default': dj_database_url.config(

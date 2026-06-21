@@ -20,6 +20,7 @@
          style="font-size:15px;font-weight:600;color:var(--text-main);text-decoration:none;">
         {{ other.username }}
       </a>
+      <div id="ws-status" style="font-size:11px;color:var(--text-light);">подключение…</div>
     </div>
   </div>
 
@@ -54,31 +55,119 @@
       </div>
     </div>
     {% empty %}
-    <div style="text-align:center;padding:40px;color:var(--text-light);font-size:13px;">
+    <div id="empty-hint" style="text-align:center;padding:40px;color:var(--text-light);font-size:13px;">
       Начните переписку первым!
     </div>
     {% endfor %}
   </div>
 
   <!-- Форма отправки -->
-  <form method="post" style="display:flex;gap:10px;align-items:flex-end;">
-    {% csrf_token %}
-    <textarea name="text" placeholder="Написать сообщение..."
+  <div style="display:flex;gap:10px;align-items:flex-end;">
+    <textarea id="msg-input" placeholder="Написать сообщение…"
               style="flex:1;background:#fff;border:1px solid var(--border);border-radius:10px;
                      padding:10px 14px;font-size:14px;resize:none;height:50px;
-                     font-family:inherit;outline:none;"
-              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.submit();}"></textarea>
-    <button style="background:var(--accent);color:#fff;border:none;border-radius:10px;
+                     font-family:inherit;outline:none;"></textarea>
+    <button id="send-btn"
+            style="background:var(--accent);color:#fff;border:none;border-radius:10px;
                    padding:12px 20px;font-size:14px;cursor:pointer;white-space:nowrap;">
       Отправить
     </button>
-  </form>
+  </div>
   {% endif %}
 </div>
 
 <script>
-// Прокрутка вниз при загрузке
-var c = document.getElementById('msgs-container');
-if(c) c.scrollTop = c.scrollHeight;
+(function () {
+  var ME      = {{ user.pk }};
+  var OTHER   = {{ other.pk }};
+  var proto   = location.protocol === 'https:' ? 'wss' : 'ws';
+  var wsUrl   = proto + '://' + location.host + '/ws/chat/' + OTHER + '/';
+  var status  = document.getElementById('ws-status');
+  var input   = document.getElementById('msg-input');
+  var sendBtn = document.getElementById('send-btn');
+  var box     = document.getElementById('msgs-container');
+
+  if (!input) return; // страница с ошибкой (не друзья)
+
+  // Прокрутка вниз
+  function scrollBottom() { box.scrollTop = box.scrollHeight; }
+  scrollBottom();
+
+  // Создать пузырь сообщения
+  function bubble(text, isMine, time) {
+    var hint = document.getElementById('empty-hint');
+    if (hint) hint.remove();
+
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;' + (isMine ? 'justify-content:flex-end;' : '');
+
+    var inner = document.createElement('div');
+    inner.style.cssText =
+      'max-width:70%;padding:10px 14px;border-radius:12px;' +
+      (isMine
+        ? 'background:var(--accent);color:#fff;border-bottom-right-radius:4px;'
+        : 'background:#fff;color:var(--text-main);border:1px solid var(--border);border-bottom-left-radius:4px;');
+
+    var txt = document.createElement('div');
+    txt.style.cssText = 'font-size:14px;line-height:1.5;';
+    txt.textContent = text;
+
+    var meta = document.createElement('div');
+    meta.style.cssText = 'font-size:10px;margin-top:4px;' +
+      (isMine ? 'color:rgba(255,255,255,.7);text-align:right;' : 'color:var(--text-light);');
+    meta.textContent = time + (isMine ? ' ✓' : '');
+
+    inner.appendChild(txt);
+    inner.appendChild(meta);
+    wrap.appendChild(inner);
+    box.appendChild(wrap);
+    scrollBottom();
+  }
+
+  // WebSocket
+  var ws;
+  function connect() {
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = function () {
+      status.textContent = 'онлайн';
+      status.style.color = '#22c55e';
+    };
+
+    ws.onclose = function () {
+      status.textContent = 'нет соединения — переподключение…';
+      status.style.color = '#ef4444';
+      setTimeout(connect, 3000);
+    };
+
+    ws.onerror = function () { ws.close(); };
+
+    ws.onmessage = function (e) {
+      var data = JSON.parse(e.data);
+      bubble(data.text, data.sender_id === ME, data.time);
+    };
+  }
+  connect();
+
+  // Отправка
+  function send() {
+    var text = input.value.trim();
+    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ text: text }));
+    input.value = '';
+    input.style.height = '50px';
+  }
+
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  // Авторастяжка textarea
+  input.addEventListener('input', function () {
+    this.style.height = '50px';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+})();
 </script>
 {% endblock %}
