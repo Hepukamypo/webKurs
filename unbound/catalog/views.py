@@ -656,6 +656,19 @@ def developer_page(request, username):
 # ── Уведомления ───────────────────────────────────────────────────────────────
 
 @login_required
+def unread_counts(request):
+    from django.http import JsonResponse
+    from django.db.models import Q
+    unread_notif = Notification.objects.filter(
+        recipient=request.user, is_read=False).count()
+    unread_msgs = 0
+    for conv in request.user.conversations.all():
+        unread_msgs += conv.messages.filter(
+            is_read=False).exclude(sender=request.user).count()
+    return JsonResponse({'notifications': unread_notif, 'messages': unread_msgs})
+
+
+@login_required
 def notifications_view(request):
     notifs = Notification.objects.filter(
         recipient=request.user).order_by('-created_at')

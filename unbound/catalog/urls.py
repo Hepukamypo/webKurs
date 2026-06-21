@@ -67,6 +67,7 @@ urlpatterns = [
 
     # Уведомления
     path('notifications/',                 views.notifications_view,   name='notifications'),
+    path('api/unread/',                    views.unread_counts,         name='unread_counts'),
 
     # Личные сообщения
     path('messages/',                      views.messages_list,        name='messages_list'),

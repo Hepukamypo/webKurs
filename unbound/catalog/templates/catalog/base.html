@@ -33,9 +33,7 @@
     <a style="font-size:13px;color:{% if 'messages' in request.resolver_match.url_name or request.resolver_match.url_name == 'conversation' %}#fff{% else %}#999{% endif %};text-decoration:none;white-space:nowrap;position:relative;display:inline-flex;align-items:center;gap:5px;"
        href="{% url 'messages_list' %}">
       Сообщения
-      {% if unread_messages %}
-      <span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:600;">{{ unread_messages }}</span>
-      {% endif %}
+      <span id="msg-badge" style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:600;display:{% if unread_messages %}inline{% else %}none{% endif %};">{{ unread_messages|default:'' }}</span>
     </a>
     {% if user.is_developer %}
     <a style="font-size:13px;color:{% if request.resolver_match.url_name == 'studio' or request.resolver_match.url_name|slice:':6' == 'studio' %}#4ade4a{% else %}#a78bfa{% endif %};text-decoration:none;white-space:nowrap;font-weight:500;"
@@ -78,13 +76,11 @@
       <a href="{% url 'notifications' %}"
          style="position:relative;text-decoration:none;display:flex;align-items:center;padding:2px 6px;">
         <span style="font-size:18px;color:#999;">🔔</span>
-        {% if unread_notifications %}
-        <span style="position:absolute;top:-2px;right:0;background:#dc2626;color:#fff;
+        <span id="notif-badge" style="position:absolute;top:-2px;right:0;background:#dc2626;color:#fff;
                      border-radius:50%;min-width:16px;height:16px;font-size:10px;
-                     display:flex;align-items:center;justify-content:center;font-weight:600;padding:0 3px;">
-          {{ unread_notifications }}
+                     display:{% if unread_notifications %}flex{% else %}none{% endif %};align-items:center;justify-content:center;font-weight:600;padding:0 3px;">
+          {{ unread_notifications|default:'' }}
         </span>
-        {% endif %}
       </a>
       <a href="{% url 'profile' user.pk %}"
          style="display:flex;align-items:center;gap:6px;text-decoration:none;">
@@ -131,6 +127,29 @@
 </main>
 
 <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+{% if user.is_authenticated %}
+<script>
+(function(){
+  var notifBadge = document.getElementById('notif-badge');
+  var msgBadge   = document.getElementById('msg-badge');
+  function updateBadge(el, count) {
+    if (!el) return;
+    if (count > 0) { el.textContent = count; el.style.display = 'flex'; }
+    else           { el.style.display = 'none'; }
+  }
+  function poll() {
+    fetch('{% url "unread_counts" %}')
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        updateBadge(notifBadge, d.notifications);
+        updateBadge(msgBadge,   d.messages);
+      })
+      .catch(function(){});
+  }
+  setInterval(poll, 10000);
+})();
+</script>
+{% endif %}
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   var input   = document.getElementById('search-input');
