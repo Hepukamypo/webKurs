@@ -584,6 +584,7 @@ def studio_game_update(request, pk):
 
 
 @developer_required
+
 def studio_game_delete(request, pk):
     game = get_object_or_404(Game, pk=pk)
     if game.developer_user != request.user and not request.user.is_admin():
